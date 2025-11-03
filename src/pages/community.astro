@@ -12,7 +12,7 @@ const metadata = {
   <!-- Supabase configuration warning (hidden by default) -->
   <div id="supabase-warning" class="hidden max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-4 md:pt-6 lg:pt-8">
     <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
-      <p class="text-sm text-yellow-800" id="supabase-warning-text">Supabase 未配置 — 某些功能（注册/登录/发帖）需要在环境变量中设置 PUBLIC_SUPABASE_URL 和 PUBLIC_SUPABASE_ANON_KEY。</p>
+      <p class="text-sm text-yellow-800" id="supabase-warning-text">Supabase not configured — some features (register/login/posting) require PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY to be set in environment variables.</p>
     </div>
   </div>
   <!-- Welcome header (moved into main section below to match Resource Center layout) -->
@@ -259,15 +259,15 @@ const metadata = {
     e.preventDefault();
     const email = $('h-login-email')?.value?.trim();
     const pwd = $('h-login-password')?.value || '';
-    if (!email || !pwd) return showToast('请输入邮箱和密码', 'error');
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pwd });
-    if (error) return showToast(error.message || '登录失败', 'error');
-    showToast('登录成功', 'success');
+  if (!email || !pwd) return showToast('Please enter email and password', 'error');
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pwd });
+  if (error) return showToast(error.message || 'Login failed', 'error');
+  showToast('Login successful', 'success');
     $('header-loginForm')?.classList.add('hidden');
   }
 
   // Fallback event delegation for clicks and form submits in case direct listeners fail
-  document.body.addEventListener('click', (ev) => {
+  document.body.addEventListener('click', async (ev) => {
     try {
       const t = ev.target;
       if (!t) return;
@@ -279,6 +279,22 @@ const metadata = {
         $('header-loginForm')?.classList.remove('hidden');
         $('header-registerForm')?.classList.add('hidden');
         $('h-login-email')?.focus();
+        return;
+      }
+      // New topic button (delegated) - ensures clicks work even if direct listener wasn't bound
+      if (t.id === 'open-new-topic' || t.closest && t.closest('#open-new-topic')) {
+        ev.preventDefault();
+        // prefer cached CURRENT_USER to avoid an extra auth call
+        if (!CURRENT_USER) {
+          // try quick check with supabase to confirm
+          try {
+            const { data } = await supabase.auth.getUser();
+            CURRENT_USER = data?.user ?? null;
+          } catch (e) { /* noop */ }
+        }
+  if (!CURRENT_USER) { showToast('Please log in', 'error'); $('open-login-panel')?.click(); return; }
+        $('new-topic-modal')?.classList.remove('hidden');
+        $('new-topic-title')?.focus();
         return;
       }
     } catch (err) {
@@ -411,7 +427,7 @@ const metadata = {
             if (!text) return showToast('回复内容不能为空', 'error');
             const { data } = await supabase.auth.getUser();
             const user = data?.user ?? null;
-            if (!user) { showToast('请先登录', 'error'); $('open-login-panel')?.click(); return; }
+            if (!user) { showToast('Please log in', 'error'); $('open-login-panel')?.click(); return; }
             // post reply (include parentId)
             const res = await postCommentToServer(postId, text, parentId);
             if (res && res.error) { showToast('回复失败：' + (res.error || ''), 'error'); return; }
@@ -767,10 +783,10 @@ const metadata = {
       submitBtn.onclick = async (ev) => {
         ev.preventDefault();
         const text = textArea.value ? textArea.value.trim() : '';
-        if (!text) return showToast('评论内容不能为空', 'error');
+  if (!text) return showToast('Comment cannot be empty', 'error');
         const { data } = await supabase.auth.getUser();
         const user = data?.user ?? null;
-        if (!user) { showToast('请先登录', 'error'); $('open-login-panel')?.click(); return; }
+            if (!user) { showToast('Please log in', 'error'); $('open-login-panel')?.click(); return; }
 
         // post to server
         const res = await postCommentToServer(id, text);

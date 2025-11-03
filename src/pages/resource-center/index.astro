@@ -10,7 +10,8 @@ const metadata = {
 // Server-rendered demo files so the grid shows on client-side navigation without requiring JS execution
 // The first entry is the public BASALT guidance PDF (direct public URL provided by user).
 const FILES = [
-	{ id: 'guidance', title: 'BASALT Guide in Chinese', category: 'guidance', size: '3.1 MB', href: 'https://cykhhfocqovwygendjmf.supabase.co/storage/v1/object/public/basalt%20resource%20center/BASALT%20guidance_20250104.pdf', updated: '2025-01-04' },
+	{ id: 'guidance', title: 'BASALT Guide in Chinese', category: 'guidance', size: '3.1 MB', href: 'https://your-supabase-url.supabase.co/storage/v1/object/public/basalt/BASALT%20guide%20v2.pdf', path: 'https://your-supabase-url.supabase.co/storage/v1/object/public/basalt/BASALT%20guide%20v2.pdf', updated: '2025-01-04' },
+    { id: 'guidance', title: 'BASALT Guide in Chinese', category: 'guidance', size: '3.1 MB', href: 'https://cykhhfocqovwygendjmf.supabase.co/storage/v1/object/public/basalt%20resource%20center/BASALT%20guidance_20250104.pdf', path: 'https://cykhhfocqovwygendjmf.supabase.co/storage/v1/object/public/basalt%20resource%20center/BASALT%20guidance_20250104.pdf', updated: '2025-01-04' },
 ];
 ---
 
@@ -91,6 +92,8 @@ const FILES = [
 	</section>
 </PageLayout>
 
+<script id="initial-files" type="application/json">{JSON.stringify(FILES)}</script>
+
 <script type="module">
 	// Fetch resource list from server (Supabase storage) and present downloadable links.
 	// If server-side API is not configured, this will gracefully fall back to demo items.
@@ -106,10 +109,15 @@ const FILES = [
 		'scripts': 'Scripts'
 	};
 
-	// fallback demo files (used if API not available)
-	let FILES = [
-		{ id: 'guidance', title: 'BASALT Guide in Chinese', category: 'guidance', size: '3.1 MB', path: 'https://cykhhfocqovwygendjmf.supabase.co/storage/v1/object/public/basalt%20resource%20center/BASALT%20guidance_20250104.pdf', updated: '2025-01-04' },
-	];
+	// initialize client FILES from the server-rendered JSON blob to avoid flash/empty-state
+	let FILES = [];
+	try {
+		const blob = document.getElementById('initial-files')?.textContent || '[]';
+		FILES = JSON.parse(blob);
+	} catch (err) {
+		console.warn('Failed to parse initial files JSON', err);
+		FILES = [];
+	}
 
 	function humanSize(bytes) {
 		if (!bytes && bytes !== 0) return '';
