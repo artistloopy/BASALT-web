@@ -1,0 +1,28 @@
+---
+import Layout from '~/layouts/LandingLayout.astro';
+
+import Hero from '~/components/widgets/Hero.astro';
+import { getPermalink } from '~/utils/permalinks';
+
+const metadata = {
+  title: 'Download BASALT',
+};
+---
+
+<Layout metadata={metadata}>
+  <!-- Hero2 Widget ******************* -->
+
+  <Hero
+    title="Download BASALT Now！"
+    subtitle="BASALT is a bioinformatics tool focused on metagenomic assembly and optimization, enabling researchers to efficiently and accurately extract high-quality microbial genomes from complex microbial community sequencing data."
+    actions={[
+      { variant: 'primary', text: 'Download', href: 'https://github.com/EMBL-PKU/BASALT/tree/master', target: '_blank', icon: 'tabler:square-rounded-arrow-right' },
+  { text: 'Guidance', href: getPermalink('/landing/operating-guidance') },
+    ]}
+    image={{
+      src: 'https://images.unsplash.com/photo-1597423498219-04418210827d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1674&q=80',
+      alt: 'Magnet attracting screws. Lead generation landing page demo',
+    }}
+  />
+
+</Layout>

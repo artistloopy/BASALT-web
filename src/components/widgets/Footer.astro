@@ -1,0 +1,124 @@
+---
+import { Icon } from 'astro-icon/components';
+import { SITE } from 'astrowind:config';
+import { getHomePermalink } from '~/utils/permalinks';
+
+interface Link {
+  text?: string;
+  href?: string;
+  ariaLabel?: string;
+  icon?: string;
+}
+
+interface Links {
+  title?: string;
+  links: Array<Link>;
+  href?: string;
+}
+
+export interface Props {
+  links: Array<Links>;
+  secondaryLinks: Array<Link>;
+  socialLinks: Array<Link>;
+  footNote?: string;
+  theme?: string;
+}
+
+const { socialLinks = [], secondaryLinks = [], links = [], footNote = '', theme = 'light' } = Astro.props;
+---
+
+<footer class:list={[{ dark: theme === 'dark' }, 'relative border-t border-gray-200 dark:border-slate-800 not-prose']}>
+  <div class="dark:bg-dark absolute inset-0 pointer-events-none" aria-hidden="true"></div>
+  <div class="relative intersect-once intersect-quarter intersect-no-queue motion-safe:md:opacity-0 motion-safe:md:intersect:animate-fade">
+    <!-- Full-width themed top area (no side gutters) -->
+    <div class="w-full bg-[#006994] dark:bg-[#004f66] text-white">
+  <div class="relative max-w-7xl mx-auto px-3 md:px-6 dark:text-slate-300 overflow-x-hidden">
+        <div class="grid grid-cols-12 gap-2 gap-y-6 sm:gap-4 py-6 md:py-10">
+          <div class="col-span-12 lg:col-span-2">
+              <div class="mb-2 flex items-center gap-3 relative z-10">
+              <a class="inline-block font-bold text-xl text-white" href={getHomePermalink()}><span class="whitespace-nowrap">{SITE?.name}</span></a>
+              {socialLinks?.length ? (
+                <ul class="flex items-center">
+                  {socialLinks.map(({ ariaLabel, href, icon }) => (
+                    <li class="ml-2">
+                      <a
+                        class="text-white/90 hover:bg-white/10 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/10 rounded-lg text-sm px-2 py-1 inline-flex items-center"
+                        aria-label={ariaLabel}
+                        href={href}
+                      >
+                        {icon && <Icon name={icon} class="w-5 h-5" />}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+            <div class="text-sm text-white/90 flex gap-1">
+              {
+                secondaryLinks.map(({ text, href }, index) => (
+                  <>
+                    {index !== 0 ? ' · ' : ''}
+                    <a
+                      class="text-white/90 hover:text-white hover:underline transition duration-150 ease-in-out"
+                      href={href}
+                      set:html={text}
+                    />
+                  </>
+                ))
+              }
+            </div>
+          </div>
+              {
+                /* Keep the brand column left, render the link columns in a right-aligned flex container
+                   to tighten horizontal spacing and align the group to the right without touching the brand or footnote. */
+              }
+              <div class="col-span-12 lg:col-span-10">
+                <div class="flex flex-wrap justify-end gap-x-1 gap-y-6 transform translate-x-6 lg:translate-x-10">
+                  {links.map(({ title, links, href }) => (
+                    <div class="w-28 md:w-32 lg:w-36">
+                      {/* Title becomes a link when there are no submenu links but href is provided */}
+                      {(!links || links.length === 0) && href ? (
+                        <div class="font-medium mb-2 text-white">
+                          <a class="text-white hover:underline" href={href}>{title}</a>
+                        </div>
+                      ) : (
+                        <div class="font-medium mb-2 text-white">{title}</div>
+                      )}
+
+                      {links && Array.isArray(links) && links.length > 0 && (
+                        <ul class="text-sm">
+                          {links.map(({ text, href, ariaLabel }) => (
+                            <li class="mb-2">
+                              <a
+                                class="text-white/90 hover:text-white hover:underline transition duration-150 ease-in-out"
+                                href={href}
+                                aria-label={ariaLabel}
+                              >
+                                <Fragment set:html={text} />
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Full-width themed bottom area (no side gutters) -->
+  <div class="w-full bg-[#006994] dark:bg-[#004f66] text-white">
+  <div class="relative max-w-7xl mx-auto px-3 md:px-6 overflow-x-hidden">
+  <!-- extra-extra-thin white separator between the upper footer content and the footnote text -->
+  <div class="border-t-[0.1px] border-white/90 my-0"></div>
+            <!-- Footnote: centered on small screens, left-aligned on md+ -->
+            <div class="w-full text-center md:text-left">
+              <div class="text-sm text-white/90 py-3 md:py-4">
+                <Fragment set:html={footNote} />
+              </div>
+            </div>
+    </div>
+  </div>
+</footer>

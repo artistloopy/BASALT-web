@@ -1,0 +1,254 @@
+---
+import PageLayout from '~/layouts/PageLayout.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+
+const metadata = {
+	title: 'Resource Center',
+	description: 'Browse resources, guides and downloadable content for BASALT.',
+};
+
+// Server-rendered demo files so the grid shows on client-side navigation without requiring JS execution
+// The first entry is the public BASALT guidance PDF (direct public URL provided by user).
+const FILES = [
+	{ id: 'guidance', title: 'BASALT Guide in Chinese', category: 'guidance', size: '3.1 MB', href: 'https://cykhhfocqovwygendjmf.supabase.co/storage/v1/object/public/basalt%20resource%20center/BASALT%20guidance_20250104.pdf', updated: '2025-01-04' },
+];
+---
+
+<PageLayout {metadata}>
+	<section class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-4 md:pt-6 lg:pt-8">
+		<div class="mb-6">
+			<h1 class="text-4xl font-bold">Resource Center</h1>
+			<p class="text-muted mt-2">This website serves as a tutorial and resource platform, gathering practical tools, detailed guides, and downloadable content.</p>
+		</div>
+
+		<div class="grid grid-cols-1 lg:grid-cols-4 gap-10">
+			<aside class="lg:col-span-1 -mt-6 md:-mt-8 lg:-mt-10">
+				<WidgetWrapper classes={{ container: 'p-0' }}>
+					<div class="bg-white dark:bg-slate-800 rounded shadow-sm overflow-hidden">
+						<div class="px-4 py-3 border-b">
+							<h4 class="font-semibold">Categories</h4>
+						</div>
+						<ul id="file-categories" class="divide-y">
+							<li>
+								<button data-cat="all" class="block w-full text-left px-6 py-4 hover:bg-[#006994] hover:text-white transition">All</button>
+							</li>
+							<li>
+								<button data-cat="guidance" class="block w-full text-left px-6 py-4 hover:bg-[#006994] hover:text-white transition">Guidance file</button>
+							</li>
+							<li>
+								<button data-cat="test-data" class="block w-full text-left px-6 py-4 hover:bg-[#006994] hover:text-white transition">Test data</button>
+							</li>
+							<li>
+								<button data-cat="data" class="block w-full text-left px-6 py-4 hover:bg-[#006994] hover:text-white transition">Datasets</button>
+							</li>
+							<li>
+								<button data-cat="scripts" class="block w-full text-left px-6 py-4 hover:bg-[#006994] hover:text-white transition">Scripts</button>
+							</li>
+                            <li>
+								<button data-cat="scripts" class="block w-full text-left px-6 py-4 hover:bg-[#006994] hover:text-white transition">Video Tutorial</button>
+							</li>
+                            <li>
+								<button data-cat="scripts" class="block w-full text-left px-6 py-4 hover:bg-[#006994] hover:text-white transition">Common questions</button>
+							</li>
+						</ul>
+					</div>
+				</WidgetWrapper>
+			</aside>
+
+			<div class="lg:col-span-3 -mt-6 md:-mt-8 lg:-mt-10">
+				<WidgetWrapper>
+					<div class="bg-white dark:bg-slate-800 rounded shadow-sm p-6">
+						<div class="flex items-center justify-between mb-4">
+							<div>
+								<h3 class="font-semibold">Files</h3>
+						
+							</div>
+							<div>
+								<!-- Search removed as requested -->
+							</div>
+						</div>
+
+						<div id="file-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+							{FILES.map(f => (
+								<div class="p-4 rounded border hover:shadow-md transition bg-white/50 dark:bg-transparent">
+									<div class="flex items-start justify-between">
+										<div>
+											<div class="font-medium">{f.title}</div>
+											<div class="text-sm text-muted">{f.category} · {f.size} · Updated {f.updated}</div>
+										</div>
+										<div class="flex items-center space-x-2">
+											<a class="px-3 py-1 text-sm rounded border" href={f.href} download>Download</a>
+											<button class="px-3 py-1 text-sm rounded bg-[#006994] text-white" data-id={f.id}>Details</button>
+										</div>
+									</div>
+								</div>
+							))}
+						</div>
+					</div>
+				</WidgetWrapper>
+			</div>
+		</div>
+	</section>
+</PageLayout>
+
+<script type="module">
+	// Fetch resource list from server (Supabase storage) and present downloadable links.
+	// If server-side API is not configured, this will gracefully fall back to demo items.
+
+	const $ = (sel) => document.querySelector(sel);
+	const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+	const CAT_LABELS = {
+		'all': 'All',
+		'guidance': 'Guidance',
+		'test-data': 'Test data',
+		'data': 'Datasets',
+		'scripts': 'Scripts'
+	};
+
+	// fallback demo files (used if API not available)
+	let FILES = [
+		{ id: 'guidance', title: 'BASALT Guide in Chinese', category: 'guidance', size: '3.1 MB', path: 'https://cykhhfocqovwygendjmf.supabase.co/storage/v1/object/public/basalt%20resource%20center/BASALT%20guidance_20250104.pdf', updated: '2025-01-04' },
+	];
+
+	function humanSize(bytes) {
+		if (!bytes && bytes !== 0) return '';
+		const b = Number(bytes);
+		if (isNaN(b)) return '';
+		const units = ['B','KB','MB','GB'];
+		let i = 0; let v = b;
+		while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+		return `${v.toFixed(v >= 100 ? 0 : 1)} ${units[i]}`;
+	}
+
+	function renderFiles(list) {
+		const grid = $('#file-grid');
+		grid.innerHTML = '';
+		if (!list || !list.length) {
+			grid.innerHTML = '<div class="p-4 text-muted">No files found.</div>';
+			return;
+		}
+
+		list.forEach(f => {
+			const el = document.createElement('div');
+			el.className = 'p-4 rounded border hover:shadow-md transition bg-white/50 dark:bg-transparent';
+
+			const meta = `${CAT_LABELS[f.category] || f.category} · ${f.size || ''} · Updated ${f.updated || ''}`;
+
+			const left = document.createElement('div');
+			left.innerHTML = `<div class="font-medium"></div><div class="text-sm text-muted">${meta}</div>`;
+			left.querySelector('.font-medium').textContent = f.title || f.name || f.path;
+
+			const actions = document.createElement('div');
+			actions.className = 'flex items-center space-x-2';
+
+			const dl = document.createElement('button');
+			dl.className = 'px-3 py-1 text-sm rounded border';
+			dl.textContent = 'Download';
+			dl.type = 'button';
+			dl.addEventListener('click', async () => await downloadFile(f.path || f.name || f.title));
+
+			const details = document.createElement('button');
+			details.className = 'px-3 py-1 text-sm rounded bg-[#006994] text-white';
+			details.type = 'button';
+			details.textContent = 'Details';
+			details.addEventListener('click', () => alert(`File: ${f.title || f.name}\nCategory: ${f.category}\nSize: ${f.size}`));
+
+			actions.appendChild(dl);
+			actions.appendChild(details);
+
+			const row = document.createElement('div');
+			row.className = 'flex items-start justify-between';
+			row.appendChild(left);
+			row.appendChild(actions);
+
+			el.appendChild(row);
+			grid.appendChild(el);
+		});
+	}
+
+	function filterFiles(category, q) {
+		let res = FILES.slice();
+		if (category && category !== 'all') res = res.filter(f => f.category === category);
+		if (q) res = res.filter(f => (f.title || f.name || '').toLowerCase().includes(q.toLowerCase()));
+		return res;
+	}
+
+	async function loadFiles() {
+		try {
+			const resp = await fetch('/api/storage/list');
+			if (!resp.ok) throw new Error('api/storage/list failed');
+			const json = await resp.json();
+			if (json && Array.isArray(json.data)) {
+				FILES = json.data.map((it, idx) => ({
+					id: String(idx),
+					name: it.name || it.path || it.id,
+					title: it.name || it.path || it.id,
+					path: it.name || it.path || it.id,
+					category: it.metadata?.category || 'data',
+					size: it.size ? humanSize(it.size) : (it.metadata?.size || ''),
+					updated: it.updated_at || it.last_modified || ''
+				}));
+			}
+		} catch (err) {
+			// keep demo FILES as fallback
+			console.debug('Failed to load storage list, using demo files', err);
+		}
+		renderFiles(FILES);
+	}
+
+	async function downloadFile(path) {
+		if (!path) {
+			alert('Download path not available for this file');
+			return;
+		}
+		// If the path is an absolute http(s) URL (public object), open it directly.
+		if (typeof path === 'string' && /^(https?:)?\/\//i.test(path)) {
+			// normalize protocol-less URLs
+			const url = path.startsWith('//') ? window.location.protocol + path : path;
+			// ensure spaces and other characters are properly encoded for browser requests
+			const safeUrl = encodeURI(url);
+			window.open(safeUrl, '_blank');
+			return;
+		}
+		try {
+			const resp = await fetch('/api/storage/signed-url', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ path }),
+			});
+			if (!resp.ok) throw new Error('signed url request failed');
+			const json = await resp.json();
+			const data = json?.data || {};
+			// data might be string or object depending on supabase client version
+			const signed = (typeof data === 'string') ? data : (data.signedUrl || data.signedURL || data.signed_url || data.url || data);
+			if (!signed) throw new Error('no signed url returned');
+			// open signed url in new tab (browser will download if content-disposition is set)
+			window.open(signed, '_blank');
+		} catch (err) {
+			console.error('downloadFile error', err);
+			alert('Unable to download file. See console for details.');
+		}
+	}
+
+	// init
+	loadFiles();
+
+	// category buttons
+	document.getElementById('file-categories').addEventListener('click', (e) => {
+		const btn = e.target.closest('button[data-cat]');
+		if (!btn) return;
+		const cat = btn.dataset.cat;
+		renderFiles(filterFiles(cat, ''));
+		// update active styling and data-active
+		$$('#file-categories button').forEach(b => {
+			b.classList.remove('bg-[#006994]','text-white');
+			delete b.dataset.active;
+		});
+		btn.classList.add('bg-[#006994]','text-white');
+		btn.dataset.active = 'true';
+	});
+
+	// search removed: filtering is category-based only
+</script>
+

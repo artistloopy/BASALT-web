@@ -1,0 +1,1254 @@
+---
+import PageLayout from '~/layouts/PageLayout.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+
+const metadata = {
+  title: 'Community Forum',
+  description: 'Join the BASALT community — ask questions, share tips, and collaborate.',
+};
+---
+
+<PageLayout {metadata}>
+  <!-- Supabase configuration warning (hidden by default) -->
+  <div id="supabase-warning" class="hidden max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-4 md:pt-6 lg:pt-8">
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+      <p class="text-sm text-yellow-800" id="supabase-warning-text">Supabase 未配置 — 某些功能（注册/登录/发帖）需要在环境变量中设置 PUBLIC_SUPABASE_URL 和 PUBLIC_SUPABASE_ANON_KEY。</p>
+    </div>
+  </div>
+  <!-- Welcome header (moved into main section below to match Resource Center layout) -->
+
+  <!-- Auth is now exposed in the site header (top-right). -->
+
+  <section class="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-4 md:pt-6 lg:pt-8">
+    <div class="mb-6">
+      <h1 class="text-4xl font-bold">Welcome to BASALT community！</h1>
+      <p class="text-muted mt-2">Hey, it's great to meet you here!</p>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+  <!-- Topics list -->
+  <aside class="lg:col-span-1 -mt-6 md:-mt-8 lg:-mt-10">
+        <WidgetWrapper classes={{ container: 'p-0' }}>
+          <div class="bg-white dark:bg-slate-800 rounded shadow-sm overflow-hidden">
+            <div class="px-4 py-3 border-b">
+              <h4 class="font-semibold">Topics</h4>
+            </div>
+            <ul class="divide-y">
+              <li class="">
+                <a href="#" class="block px-4 py-3 hover:bg-[#006994] hover:text-white transition">Performance tips</a>
+              </li>
+              <li>
+                <a href="#" class="block px-4 py-3 hover:bg-[#006994] hover:text-white transition">Binning strategies</a>
+              </li>
+              <li>
+                <a href="#" class="block px-4 py-3 hover:bg-[#006994] hover:text-white transition">Bioinformatics</a>
+              </li>
+              <li>
+                <a href="#" class="block px-4 py-3 hover:bg-[#006994] hover:text-white transition">Technical issues</a>
+              </li>
+              <li>
+                <a href="#" class="block px-4 py-3 hover:bg-[#006994] hover:text-white transition">Feedback and Improvement</a>
+              </li>
+            </ul>
+          </div>
+        </WidgetWrapper>
+      </aside>
+
+      <!-- Main content / placeholder for thread list -->
+      <div class="lg:col-span-2">
+        <WidgetWrapper>
+          <div class="bg-white dark:bg-slate-800 rounded shadow-sm p-6">
+            <!-- Auth moved to header: register/login available in top-right "Account" panel -->
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center space-x-3" id="community-tabs">
+                <button type="button" data-mode="latest" class="tab-btn px-3 py-1 rounded bg-[#006994] text-white text-sm font-medium">Latest</button>
+                <button type="button" data-mode="most-liked" class="tab-btn px-3 py-1 rounded text-sm font-medium">Most liked</button>
+                <button type="button" data-mode="my-posts" class="tab-btn px-3 py-1 rounded text-sm font-medium">My posts</button>
+                <button type="button" data-mode="my-liked" class="tab-btn px-3 py-1 rounded text-sm font-medium">My liked</button>
+              </div>
+              <button type="button" id="open-new-topic" class="text-sm font-medium text-[#006994] hover:underline">New topic</button>
+            </div>
+
+            <ul id="thread-list" class="space-y-4"></ul>
+
+            <!-- New Topic Modal (moved to document body for reliable fixed positioning) -->
+          </div>
+        </WidgetWrapper>
+      </div>
+    </div>
+  </section>
+</PageLayout>
+
+<!-- New Topic Modal (moved to document root so fixed positioning works reliably) -->
+<div id="new-topic-modal" class="hidden fixed inset-0 z-50">
+  <div class="flex items-start sm:items-center justify-center min-h-screen p-4">
+    <div class="absolute inset-0 bg-black/50" aria-hidden="true"></div>
+    <div class="relative bg-white dark:bg-slate-800 rounded shadow-lg w-full max-w-2xl p-6 z-10 max-h-[90vh] overflow-auto">
+      <h4 class="text-lg font-semibold mb-2">Create new topic</h4>
+      <form id="new-topic-form" class="space-y-3">
+        <input id="new-topic-title" required class="w-full rounded border px-3 py-2" placeholder="Title" />
+        <textarea id="new-topic-content" required class="w-full rounded border px-3 py-2" rows="6" placeholder="Write your question or topic details"></textarea>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="cancel-new-topic" class="px-3 py-1 rounded border">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded bg-[#006994] text-white">Post</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Supabase powered client-script: handles auth, loading posts and creating posts -->
+<!-- Quick inline test to verify scripts run in the browser -->
+<script>
+  try { console.log('[community] inline test'); } catch (e) { console.error('[community] inline test error', e); }
+</script>
+
+<script type="module">
+  import { supabase } from '~/lib/supabase';
+
+  const $ = (id) => document.getElementById(id);
+
+  console.log('[community] script loaded');
+
+  // cached current user to avoid round-trip auth calls on every click
+  let CURRENT_USER = null;
+
+  // escape helper to avoid XSS when inserting HTML
+  function escapeHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // registration UI removed: registration-related client state cleared
+
+  // simple toast helper (in-page notifications)
+  function ensureToastContainer() {
+    let c = document.getElementById('toast-container');
+    if (!c) {
+      c = document.createElement('div');
+      c.id = 'toast-container';
+      c.style.position = 'fixed';
+      c.style.right = '1rem';
+      c.style.top = '1rem';
+      c.style.zIndex = '99999';
+      c.style.display = 'flex';
+      c.style.flexDirection = 'column';
+      c.style.gap = '0.5rem';
+      document.body.appendChild(c);
+    }
+    return c;
+  }
+
+  function showToast(message, type = 'info', timeout = 4000) {
+    try {
+      const container = ensureToastContainer();
+      const el = document.createElement('div');
+      el.setAttribute('role', 'status');
+      el.style.minWidth = '180px';
+      el.style.maxWidth = '380px';
+      el.style.padding = '0.6rem 0.8rem';
+      el.style.borderRadius = '8px';
+      el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)';
+      el.style.color = 'white';
+      el.style.fontSize = '0.95rem';
+      el.style.lineHeight = '1.2';
+      el.style.opacity = '0';
+      el.style.transition = 'opacity 220ms ease, transform 220ms ease';
+      el.style.transform = 'translateY(-6px)';
+      if (type === 'error') el.style.background = '#ef4444';
+      else if (type === 'success') el.style.background = '#10b981';
+      else if (type === 'warn') el.style.background = '#f59e0b';
+      else el.style.background = '#374151';
+      el.textContent = message;
+      container.appendChild(el);
+      // animate in
+      requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+      const to = setTimeout(() => {
+        // animate out
+        el.style.opacity = '0'; el.style.transform = 'translateY(-6px)';
+        setTimeout(() => { try { container.removeChild(el); } catch (e) {} }, 240);
+      }, timeout);
+      el.addEventListener('click', () => { clearTimeout(to); el.style.opacity = '0'; setTimeout(() => { try { container.removeChild(el); } catch (e) {} }, 200); });
+      return el;
+    } catch (e) {
+      try { alert(message); } catch (er) { console.log(message); }
+    }
+  }
+
+  // Render current auth status into header/sidebar if present
+  async function renderUser(user) {
+    if ($('auth-status')) {
+      if (user) {
+        const display = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
+  $('auth-status').innerHTML = `Hi, <strong class="break-words" title="${escapeHtml(user.email || '')}">${escapeHtml(display)}</strong> <button id="logoutBtn" class="ml-3 text-sm text-[#006994] hover:underline">Logout</button>`;
+        $('logoutBtn')?.addEventListener('click', async (e) => {
+          e.preventDefault();
+          await supabase.auth.signOut();
+          await initAuth();
+        });
+      } else {
+        $('auth-status').textContent = 'Not signed in';
+      }
+    }
+
+    if ($('auth-status-header')) {
+      if (user) {
+        const display = user.user_metadata?.name || user.email?.split('@')[0] || '';
+  $('auth-status-header').textContent = `Hi, ${display}`;
+  $('auth-status-header').setAttribute('title', user.email || '');
+  try { $('auth-status-header').style.whiteSpace = 'normal'; } catch (e) { /* noop */ }
+        // toggle header buttons if exist
+        $('open-register-panel')?.classList.add('hidden');
+        $('open-login-panel')?.classList.add('hidden');
+        $('close-auth-panel')?.classList.remove('hidden');
+        const headerLogout = $('header-logout');
+        if (headerLogout) {
+          headerLogout.classList.remove('hidden');
+          headerLogout.onclick = async (ev) => { ev.preventDefault(); await supabase.auth.signOut(); await initAuth(); };
+        }
+      } else {
+        $('auth-status-header').textContent = '';
+        $('open-register-panel')?.classList.remove('hidden');
+        $('open-login-panel')?.classList.remove('hidden');
+        $('close-auth-panel')?.classList.add('hidden');
+  if ($('header-logout')) $('header-logout').classList.add('hidden');
+      }
+    }
+    // update cached user for fast access in event handlers
+    try { CURRENT_USER = user; } catch (e) { CURRENT_USER = user; }
+  }
+
+  async function initAuth() {
+    const { data } = await supabase.auth.getUser();
+    const user = data?.user ?? null;
+    await renderUser(user);
+
+    // listen for auth changes
+    supabase.auth.onAuthStateChange(async (_event, session) => {
+      const u = session?.user ?? null;
+      await renderUser(u);
+    });
+
+    // registration-related modals and resend logic removed
+  }
+
+  // pending posts stored locally until server confirms persistence
+  function getPendingPosts() {
+    try { return JSON.parse(localStorage.getItem('bb_pending_posts') || '[]'); } catch { return []; }
+  }
+  function savePendingPosts(arr) { try { localStorage.setItem('bb_pending_posts', JSON.stringify(arr)); } catch (e) { /* noop */ } }
+  function addPendingPost(post) {
+    const arr = getPendingPosts();
+    arr.unshift(post);
+    savePendingPosts(arr);
+  }
+  function removePendingMatching(serverRow) {
+    try {
+      const arr = getPendingPosts();
+      const left = arr.filter(p => {
+        // match by id (if temp id used) or by title+content+approx timestamp
+        if (p.id && serverRow.id && String(p.id) === String(serverRow.id)) return false;
+        if (p.title === serverRow.title && (p.content || '').slice(0,200) === (serverRow.content||'').slice(0,200)) return false;
+        return true;
+      });
+      savePendingPosts(left);
+    } catch (e) { /* noop */ }
+  }
+
+  // registration handler removed
+
+  async function handleHeaderLogin(e) {
+    e.preventDefault();
+    const email = $('h-login-email')?.value?.trim();
+    const pwd = $('h-login-password')?.value || '';
+    if (!email || !pwd) return showToast('请输入邮箱和密码', 'error');
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pwd });
+    if (error) return showToast(error.message || '登录失败', 'error');
+    showToast('登录成功', 'success');
+    $('header-loginForm')?.classList.add('hidden');
+  }
+
+  // Fallback event delegation for clicks and form submits in case direct listeners fail
+  document.body.addEventListener('click', (ev) => {
+    try {
+      const t = ev.target;
+      if (!t) return;
+      // open auth panel
+      // open-register-panel removed (registration disabled)
+      if (t.id === 'open-login-panel') {
+        ev.preventDefault();
+        $('auth-panel')?.classList.remove('hidden');
+        $('header-loginForm')?.classList.remove('hidden');
+        $('header-registerForm')?.classList.add('hidden');
+        $('h-login-email')?.focus();
+        return;
+      }
+    } catch (err) {
+      console.error('[community] click delegation error', err);
+    }
+  });
+
+  // Comments: server-backed (via /api/comments) with client-side pager state
+  let currentCommentsPostId = null;
+  let currentCommentsPage = 1;
+  const COMMENTS_PAGE_LIMIT = 5;
+
+  async function fetchComments(postId, page = 1, limit = COMMENTS_PAGE_LIMIT) {
+    try {
+      const resp = await fetch(`/api/comments?postId=${encodeURIComponent(postId)}&page=${page}&limit=${limit}`);
+      if (!resp.ok) return { data: [], total: 0, page, limit };
+      const json = await resp.json();
+      return { data: json.data || [], total: json.total || 0, page: json.page || page, limit: json.limit || limit };
+    } catch (e) {
+      console.debug('fetchComments failed', e);
+      return { data: [], total: 0, page, limit };
+    }
+  }
+
+  async function postCommentToServer(postId, content, parentId = null) {
+    try {
+      const { data: _sess } = await supabase.auth.getSession();
+      const token = _sess?.session?.access_token || null;
+      if (!token) return { error: 'Not authenticated' };
+  const body = { post_id: postId, content };
+  // include parent_id when replying
+  if (parentId) body.parent_id = parentId;
+      const resp = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      if (!resp.ok) return { error: 'Failed to post' };
+      const json = await resp.json();
+      return { data: json.data || [] };
+    } catch (e) {
+      console.error('postCommentToServer error', e);
+      return { error: String(e) };
+    }
+  }
+
+  async function renderCommentsForPost(postId, page = 1) {
+    currentCommentsPostId = postId;
+    currentCommentsPage = page;
+    const list = document.getElementById('pd-comments-list');
+    const countEl = document.getElementById('pd-comments');
+  const pagerLeft = document.getElementById('pd-comments-left');
+  const pagerRight = document.getElementById('pd-comments-right');
+  const pageDisplay = document.getElementById('pd-comments-page-display');
+    if (!list) return;
+    list.innerHTML = '<li class="text-sm text-muted">Loading...</li>';
+    const res = await fetchComments(postId, page, COMMENTS_PAGE_LIMIT);
+    list.innerHTML = '';
+    // read navigation username (if present) to display instead of generic '匿名' when comments lack author_display
+    const navStatusEl = document.getElementById('auth-status-header');
+    let navName = navStatusEl ? (navStatusEl.textContent || '').trim() : null;
+    // header often uses "Hi, NAME" — strip polite prefix if present
+    if (navName && navName.toLowerCase().startsWith('hi,')) {
+      navName = navName.substring(3).trim();
+    }
+    // Build a tree view: top-level comments first, then replies indented
+    const comments = Array.isArray(res.data) ? res.data.slice() : [];
+    // replies map: parent_id -> [comments]
+    const repliesMap = {};
+    for (const c of comments) {
+      if (c.parent_id) {
+        const pid = String(c.parent_id);
+        repliesMap[pid] = repliesMap[pid] || [];
+        repliesMap[pid].push(c);
+      }
+    }
+
+    const topLevel = comments.filter(c => !c.parent_id);
+
+    function createCommentLi(c, indent = 0) {
+      const li = document.createElement('li');
+      li.className = 'rounded border p-2';
+      if (indent) li.className += ' ml-6 border-l pl-3 text-sm';
+
+      const rawAuthor = (c.author_display || '') + '';
+      const low = rawAuthor.trim().toLowerCase();
+      const isPlaceholder = !rawAuthor.trim() || low === '匿名' || low === 'anonymous' || low === 'anon';
+      const author = escapeHtml(isPlaceholder ? (navName || '匿名') : rawAuthor);
+      const content = escapeHtml(c.content || '');
+      const time = c.created_at ? new Date(c.created_at).toLocaleString() : '';
+
+      // basic comment HTML with reply button
+      li.innerHTML = `<div class="flex justify-between items-start"><div><div class="text-sm font-medium">${author} <span class="text-xs text-muted ml-2">${time}</span></div><div class="mt-1 text-sm">${content}</div></div><div class="ml-3 flex flex-col items-end"><button class="reply-btn text-sm text-[#006994] hover:underline" data-id="${c.id}">Reply</button></div></div>`;
+
+      // attach reply handler
+      const replyBtn = li.querySelector('.reply-btn');
+      if (replyBtn) {
+        replyBtn.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          toggleReplyForm(li, c.id);
+        });
+      }
+
+      list.appendChild(li);
+      // append any replies
+      const kids = repliesMap[String(c.id)] || [];
+      if (kids.length) {
+        kids.sort((a,b)=> new Date(a.created_at) - new Date(b.created_at)).forEach(k => createCommentLi(k, indent + 1));
+      }
+    }
+
+    // toggle an inline reply form under a comment li
+    function toggleReplyForm(containerLi, parentId) {
+      try {
+        // remove existing form if present
+        const existing = containerLi.querySelector('.reply-form');
+        if (existing) { existing.remove(); return; }
+
+        const formWrap = document.createElement('div');
+        formWrap.className = 'reply-form mt-2';
+        formWrap.innerHTML = `<textarea class="reply-input w-full rounded border px-2 py-1 text-sm" rows="3" placeholder="Write a reply..."></textarea><div class="flex justify-end mt-1"><button class="reply-cancel px-2 py-1 mr-2 border rounded text-sm">Cancel</button><button class="reply-submit px-3 py-1 rounded bg-[#006994] text-white text-sm">Reply</button></div>`;
+        const cancel = formWrap.querySelector('.reply-cancel');
+        const submit = formWrap.querySelector('.reply-submit');
+        const textarea = formWrap.querySelector('.reply-input');
+        if (cancel) cancel.addEventListener('click', (e) => { e.preventDefault(); formWrap.remove(); });
+        if (submit) submit.addEventListener('click', async (e) => {
+          try {
+            e.preventDefault();
+            const text = (textarea && textarea.value) ? textarea.value.trim() : '';
+            if (!text) return showToast('回复内容不能为空', 'error');
+            const { data } = await supabase.auth.getUser();
+            const user = data?.user ?? null;
+            if (!user) { showToast('请先登录', 'error'); $('open-login-panel')?.click(); return; }
+            // post reply (include parentId)
+            const res = await postCommentToServer(postId, text, parentId);
+            if (res && res.error) { showToast('回复失败：' + (res.error || ''), 'error'); return; }
+            // refresh comments to show reply
+            await renderCommentsForPost(postId, 1);
+          } catch (err) { console.error('reply submit error', err); showToast('回复失败', 'error'); }
+        });
+
+        containerLi.appendChild(formWrap);
+        textarea?.focus();
+      } catch (err) { /* noop */ }
+    }
+
+    // render
+    topLevel.sort((a,b)=> new Date(b.created_at) - new Date(a.created_at)).forEach(c => createCommentLi(c, 0));
+  if (countEl) {
+    // countEl used to contain the whole text; now we update the count span
+    const cc = document.getElementById('pd-comments-count');
+    if (cc) cc.textContent = String(res.total || 0);
+  }
+  // Also update the comment count visible in the thread list for this post so both views match
+  try {
+    const threadLi = document.querySelector(`.thread-item[data-id="${postId}"]`);
+    if (threadLi) {
+      const fonts = threadLi.querySelectorAll('.font-medium');
+      if (fonts && fonts.length) {
+        const last = fonts[fonts.length - 1];
+        last.textContent = String(res.total || 0);
+      }
+      threadLi.setAttribute('data-comments', String(res.total || 0));
+    }
+  } catch (e) { /* noop */ }
+    // pager enable/disable
+    const lastPage = Math.max(1, Math.ceil((res.total || 0) / (res.limit || COMMENTS_PAGE_LIMIT)));
+    if (pageDisplay) pageDisplay.textContent = `${res.page || 1}/${lastPage}`;
+    if (pagerLeft) pagerLeft.disabled = (res.page || 1) <= 1;
+    if (pagerRight) pagerRight.disabled = (res.page || 1) >= lastPage;
+
+    // bind pager clicks
+  if (pagerLeft) pagerLeft.onclick = (e) => { e.preventDefault(); if ((res.page || 1) > 1) renderCommentsForPost(postId, (res.page || 1) - 1); };
+  if (pagerRight) pagerRight.onclick = (e) => { e.preventDefault(); if ((res.page || 1) < lastPage) renderCommentsForPost(postId, (res.page || 1) + 1); };
+  }
+
+  document.body.addEventListener('submit', (ev) => {
+    try {
+      const form = ev.target;
+      if (!form || !form.id) return;
+  // header-registerForm handler removed (registration disabled)
+      if (form.id === 'header-loginForm') return handleHeaderLogin(ev);
+    } catch (err) {
+      console.error('[community] submit delegation error', err);
+    }
+  });
+
+  // Load posts from Supabase
+  async function loadPosts() {
+    // Prefer server-side API which can fallback to a local file if Supabase table is missing
+    try {
+      const resp = await fetch('/api/posts');
+      if (resp.ok) {
+        const json = await resp.json();
+        let serverData = json?.data || [];
+        // Merge pending local posts so they remain visible until server confirms them
+        try {
+          const pending = getPendingPosts();
+          // filter out any pending that already exist on server (match by title+content)
+          const merged = [];
+          // prepend pending posts that are not yet on server
+          for (const p of pending) {
+            const exists = serverData.some(s => (s.id && p.id && String(s.id) === String(p.id)) || (s.title === p.title && (s.content||'').slice(0,200) === (p.content||'').slice(0,200)));
+            if (!exists) merged.push(p);
+          }
+          serverData = merged.concat(serverData);
+          // attempt to clear any pending that are now on server
+          for (const s of json?.data || []) removePendingMatching(s);
+        } catch (err) { /* noop */ }
+        return serverData;
+      }
+      console.warn('[community] /api/posts returned', resp.status);
+    } catch (e) {
+      console.debug('[community] /api/posts fetch failed', e);
+    }
+
+    // Fallback: query Supabase directly (client-side) if API call failed
+    try {
+        const { data, error } = await supabase
+          .from('posts')
+          .select('id,title,content,author_display,created_at,likes')
+          .order('created_at', { ascending: false })
+          .limit(100);
+      if (error) {
+        console.error('loadPosts error', error);
+        try { showToast('无法加载帖子：' + (error.message || JSON.stringify(error)), 'error', 8000); } catch (e) { /* noop */ }
+        return [];
+      }
+      return data || [];
+    } catch (err) {
+      console.error('loadPosts fallback error', err);
+      return [];
+    }
+  }
+
+  function createPostElement(p) {
+    const li = document.createElement('li');
+    li.className = 'thread-item p-4 rounded border hover:shadow-md transition';
+    li.setAttribute('data-id', p.id);
+    li.setAttribute('data-pubdate', p.created_at);
+    li.setAttribute('data-likes', String(p.likes || 0));
+  // store an author fallback: prefer author_display, then nav header display, then author_email local-part
+  // we attempt to read the current header display if available (client-side render)
+  let headerDisplay = '';
+  try {
+    const navEl = document && document.getElementById && document.getElementById('auth-status-header');
+    if (navEl) {
+      headerDisplay = (navEl.textContent || '').toString().trim();
+      if (headerDisplay.toLowerCase().startsWith('hi,')) headerDisplay = headerDisplay.substring(3).trim();
+    }
+  } catch (e) { /* noop */ }
+  const authorFallback = p.author_display || headerDisplay || (p.author_email ? (String(p.author_email).split('@')[0]) : '') || '';
+  li.setAttribute('data-author', authorFallback);
+  // store full content for detail view
+  li.setAttribute('data-content', p.content || '');
+
+    const title = escapeHtml(p.title || 'Untitled');
+    const content = escapeHtml(((p.content || '')).slice(0, 800));
+
+    li.innerHTML = `
+      <a href="#" class="block">
+        <div class="flex justify-between">
+          <div>
+            <h4 class="font-semibold text-lg">${title}</h4>
+            <p class="text-sm text-muted mt-1">Posted by <span class="font-semibold">${escapeHtml(authorFallback)}</span> · <time class="text-xs text-muted">${new Date(p.created_at).toLocaleString()}</time></p>
+            <p class="text-sm text-muted mt-2">${content}</p>
+          </div>
+          <div class="flex items-center space-x-4 text-sm text-muted">
+            <button class="like-btn flex items-center space-x-1 text-muted" aria-label="like" data-id="${p.id}">
+              <span aria-hidden="true" class="like-icon transition-transform duration-150">♡</span>
+              <span class="like-count font-medium">${p.likes || 0}</span>
+            </button>
+            <div class="flex items-center space-x-1">
+              <span aria-hidden="true">💬</span>
+              <span class="font-medium">0</span>
+            </div>
+            <button class="delete-post hidden text-sm text-red-600 hover:underline" data-id="${p.id}">Delete</button>
+          </div>
+        </div>
+      </a>
+    `;
+
+  // set author id attribute if available
+  li.setAttribute('data-author-id', p.author_id || '');
+
+  // reveal delete button if current user is the author
+  (async () => {
+    try {
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user ?? null;
+      const deleteBtn = li.querySelector('.delete-post');
+      if (!deleteBtn) return;
+
+      // get post-side author info
+      const authorId = (li.getAttribute('data-author-id') || '').trim();
+      const authorDisplay = (li.getAttribute('data-author') || '').trim();
+      const authorEmail = (p.author_email || '') + '';
+
+      if (!user) return; // not logged in -> keep hidden
+
+      // derive user identity values
+      const userId = (user.id || '') + '';
+      const userEmail = (user.email || '') + '';
+      const userDisplayRaw = (user.user_metadata && (user.user_metadata.username || user.user_metadata.name || user.user_metadata.display_name)) || (userEmail ? userEmail.split('@')[0] : '');
+
+      const norm = (s) => (s || '').toString().trim().toLowerCase();
+
+      const matchById = authorId && userId && norm(authorId) === norm(userId);
+      const matchByEmail = authorEmail && userEmail && norm(authorEmail) === norm(userEmail);
+      const matchByDisplay = authorDisplay && userDisplayRaw && norm(authorDisplay) === norm(userDisplayRaw);
+
+      if (matchById || matchByEmail || matchByDisplay) {
+        deleteBtn.classList.remove('hidden');
+        deleteBtn.onclick = async (ev) => {
+          ev.preventDefault();
+          if (!confirm('Delete this post?')) return;
+          const tokenResp = await supabase.auth.getSession();
+          const token = tokenResp?.data?.session?.access_token || null;
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) headers.Authorization = `Bearer ${token}`;
+          try {
+            const resp = await fetch('/api/posts', { method: 'DELETE', headers, body: JSON.stringify({ id: p.id }) });
+            if (!resp.ok) {
+              const j = await resp.json().catch(()=>({}));
+              return showToast('Failed to delete: ' + (j?.error || resp.statusText), 'error');
+            }
+            // remove element from DOM
+            try { li.remove(); } catch (_) { /* noop */ }
+            showToast('Post deleted', 'success');
+          } catch (e) {
+            console.error('delete post error', e);
+            showToast('Failed to delete', 'error');
+          }
+        };
+      }
+    } catch (e) { /* noop */ }
+  })();
+
+    return li;
+  }
+
+  // Post detail modal (document root modal)
+  const detailModalHtml = `
+  <div id="post-detail-modal" class="hidden fixed inset-0 z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+  <div id="pd-overlay" class="absolute inset-0 bg-black/50" aria-hidden="true"></div>
+      <div class="relative bg-white dark:bg-slate-800 rounded shadow-lg w-full max-w-3xl p-6 z-10 max-h-[90vh] overflow-auto">
+        <header class="flex items-start justify-between mb-4">
+          <div class="flex items-center space-x-4">
+            <h3 id="pd-title" class="text-xl font-semibold"></h3>
+            <p id="pd-meta" class="text-sm text-muted"></p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button id="pd-close" class="text-gray-500 dark:text-gray-300 hover:underline">Close</button>
+          </div>
+        </header>
+        <!-- Post content: separated by top and bottom horizontal lines -->
+        <div class="mt-3">
+          <div class="border-t border-b border-gray-200 dark:border-slate-700 py-4">
+            <article id="pd-content" class="prose max-w-none text-sm text-default"></article>
+          </div>
+        </div>
+        <footer class="mt-4 text-sm text-muted">
+          <div id="pd-stats" class="flex flex-col items-start space-y-2">
+            <div class="flex items-center">
+              <div class="w-8 flex justify-center">
+                <button id="pd-like-btn" class="like-btn flex items-center justify-center w-8 h-8 rounded-full text-muted" aria-label="like" data-id="">
+                  <span aria-hidden="true" class="like-icon transition-transform duration-150">♡</span>
+                </button>
+              </div>
+              <div id="pd-likes" class="text-sm text-muted">Liked: <span id="pd-like-count" class="like-count font-medium">0</span></div>
+            </div>
+            <div class="flex items-center">
+              <div class="w-8 flex justify-center"><span aria-hidden="true">💬</span></div>
+              <div id="pd-comments" class="text-sm text-muted">Comments: <span id="pd-comments-count">0</span></div>
+            </div>
+          </div>
+
+          <!-- Comments list -->
+          <div id="pd-comments-container" class="mt-3">
+            <ul id="pd-comments-list" class="space-y-2 max-h-48 overflow-auto text-sm text-default mb-3"></ul>
+
+            <!-- Pager: show current/last with left/right chevrons -->
+            <div id="pd-comments-pager" class="flex items-center justify-center text-sm text-muted mb-2 space-x-4">
+              <button id="pd-comments-left" class="px-2 py-1 rounded border" aria-label="Previous page">‹</button>
+              <div id="pd-comments-page-display" class="font-medium">1/1</div>
+              <button id="pd-comments-right" class="px-2 py-1 rounded border" aria-label="Next page">›</button>
+            </div>
+
+            <!-- Add comment form -->
+            <div class="mt-2">
+              <label for="pd-comment-input" class="sr-only">Add a comment</label>
+              <textarea id="pd-comment-input" rows="3" class="w-full rounded border px-3 py-2 text-sm" placeholder="Write a comment..."></textarea>
+              <div class="flex justify-end mt-2">
+                <button id="pd-comment-submit" class="px-3 py-1 rounded bg-[#006994] text-white text-sm">Comment</button>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>`;
+
+  // append modal to document body once DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    try {
+      if (!document.getElementById('post-detail-modal')) {
+        const frag = document.createElement('div');
+        frag.innerHTML = detailModalHtml;
+        document.body.appendChild(frag.firstElementChild);
+      }
+    } catch (e) { /* noop */ }
+  });
+
+  function showPostDetailByElement(li) {
+    const id = li.getAttribute('data-id');
+    const title = li.querySelector('h4')?.textContent || '';
+    let author = (li.getAttribute('data-author') || '').trim();
+    // try visible element fallback
+    if (!author) {
+      const vis = li.querySelector('.font-medium');
+      author = vis ? (vis.textContent || '').trim() : '';
+    }
+    // treat common placeholders as missing so we can fallback to navName
+    const isPlaceholderAuthor = (() => {
+      const raw = (author || '').toString().trim();
+      if (!raw) return true;
+      const low = raw.toLowerCase();
+      if (['匿名', 'anonymous', 'anon'].includes(low)) return true;
+      try {
+        if (/^\d+的\d+$/.test(raw)) return true; // matches patterns like "1的1"
+      } catch (e) { /* noop */ }
+      return false;
+    })();
+
+    if (isPlaceholderAuthor) {
+      const navEl = document.getElementById('auth-status-header');
+      if (navEl) {
+        let navName = (navEl.textContent || '').trim();
+        if (navName.toLowerCase().startsWith('hi,')) navName = navName.substring(3).trim();
+        author = navName || author || '';
+      }
+    }
+    // prefer stored data-content, fallback to visible snippet in the list
+    const content = li.getAttribute('data-content') || li.querySelector('p.text-sm')?.textContent || li.querySelector('p')?.textContent || '';
+    const likes = li.getAttribute('data-likes') || '0';
+    const pub = li.getAttribute('data-pubdate') || '';
+
+    const modal = document.getElementById('post-detail-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+  const t = document.getElementById('pd-title'); if (t) t.textContent = title;
+  const m = document.getElementById('pd-meta'); if (m) m.innerHTML = `Posted by <span class="font-semibold">${escapeHtml(author)}</span> · <time class="text-xs text-muted">${new Date(pub).toLocaleString()}</time>`;
+    const c = document.getElementById('pd-content'); if (c) c.textContent = content;
+  const likeBtn = document.getElementById('pd-like-btn');
+  if (likeBtn) {
+    likeBtn.setAttribute('data-id', id || '');
+    const icon = likeBtn.querySelector('.like-icon');
+    const countEl = document.getElementById('pd-like-count');
+    if (countEl) countEl.textContent = String(likes || '0');
+    try {
+      const liked = getLikedSet();
+      if (icon) {
+        if (liked.has(id)) {
+          icon.textContent = '❤';
+          icon.classList.add('text-red-500');
+        } else {
+          icon.textContent = '♡';
+          icon.classList.remove('text-red-500');
+        }
+      }
+    } catch (e) { /* noop */ }
+  }
+  // comments placeholder: update count and render stored comments
+  const cmCount = document.getElementById('pd-comments-count'); if (cmCount) cmCount.textContent = (li.querySelector('.font-medium') ? li.querySelector('.font-medium').textContent : '0');
+    renderCommentsForPost(id);
+
+  const closeBtn = document.getElementById('pd-close'); if (closeBtn) closeBtn.onclick = (e) => { e.preventDefault(); modal.classList.add('hidden'); };
+  // clicking outside the modal (overlay) should also close the modal
+  const overlay = document.getElementById('pd-overlay'); if (overlay) overlay.onclick = (e) => { e.preventDefault(); modal.classList.add('hidden'); };
+
+    // wire comment submit
+    const submitBtn = document.getElementById('pd-comment-submit');
+    const textArea = document.getElementById('pd-comment-input');
+    if (submitBtn && textArea) {
+      submitBtn.onclick = async (ev) => {
+        ev.preventDefault();
+        const text = textArea.value ? textArea.value.trim() : '';
+        if (!text) return showToast('评论内容不能为空', 'error');
+        const { data } = await supabase.auth.getUser();
+        const user = data?.user ?? null;
+        if (!user) { showToast('请先登录', 'error'); $('open-login-panel')?.click(); return; }
+
+        // post to server
+        const res = await postCommentToServer(id, text);
+        if (res && res.error) {
+          showToast('发表评论失败：' + (res.error || ''), 'error');
+          return;
+        }
+
+        // refresh comments (go to first page to show newest)
+        await renderCommentsForPost(id, 1);
+        textArea.value = '';
+
+        // update thread list comment count visual by fetching total from server
+        try {
+          const meta = await fetch(`/api/comments?postId=${encodeURIComponent(id)}&page=1&limit=1`);
+          if (meta.ok) {
+            const mj = await meta.json();
+            const total = mj.total || 0;
+            const fonts = li.querySelectorAll('.font-medium');
+            if (fonts && fonts.length) {
+              const last = fonts[fonts.length - 1];
+              last.textContent = String(total);
+            }
+          }
+        } catch (e) { /* noop */ }
+      };
+    }
+  }
+
+  // double-click handler: expand post instead of logging out
+  // Support both single-click and double-click to open post detail.
+  // Use a small timeout to distinguish single vs double clicks and avoid double-opens.
+  let __clickOpenTimer = null;
+  let __suppressNextClick = false;
+
+  document.body.addEventListener('click', (ev) => {
+    try {
+      const li = ev.target && ev.target.closest && ev.target.closest('.thread-item');
+      if (!li) return;
+      ev.preventDefault();
+      // if a dblclick just happened, skip this click
+      if (__suppressNextClick) { __suppressNextClick = false; return; }
+      if (__clickOpenTimer) clearTimeout(__clickOpenTimer);
+      __clickOpenTimer = setTimeout(() => {
+        showPostDetailByElement(li);
+        __clickOpenTimer = null;
+      }, 200);
+    } catch (err) { /* noop */ }
+  });
+
+  document.body.addEventListener('dblclick', (ev) => {
+    try {
+      const li = ev.target && ev.target.closest && ev.target.closest('.thread-item');
+      if (!li) return;
+      // cancel pending single-click open
+      if (__clickOpenTimer) { clearTimeout(__clickOpenTimer); __clickOpenTimer = null; }
+      __suppressNextClick = true;
+      ev.preventDefault();
+      ev.stopPropagation();
+      showPostDetailByElement(li);
+    } catch (err) { /* noop */ }
+  });
+
+  async function refreshPostList() {
+    const list = $('thread-list');
+    if (!list) return;
+    list.innerHTML = '';
+            const posts = await loadPosts();
+    posts.forEach((p) => {
+      const el = createPostElement(p);
+      list.appendChild(el);
+    });
+    updateLikeButtons();
+    // asynchronously fetch current comment totals for each post so the thread list shows up-to-date counts
+    try {
+      posts.forEach(async (p) => {
+        try {
+          const resp = await fetch(`/api/comments?postId=${encodeURIComponent(p.id)}&page=1&limit=1`);
+          if (!resp.ok) return;
+          const j = await resp.json().catch(() => ({}));
+          const total = j.total || 0;
+          const li = document.querySelector(`.thread-item[data-id="${p.id}"]`);
+          if (li) {
+            const fonts = li.querySelectorAll('.font-medium');
+            if (fonts && fonts.length) {
+              const last = fonts[fonts.length - 1];
+              last.textContent = String(total);
+            }
+            li.setAttribute('data-comments', String(total));
+          }
+        } catch (e) { /* noop */ }
+      });
+    } catch (e) { /* noop */ }
+  }
+
+  // Likes: try to persist to Supabase (requires RLS to allow authenticated updates), fallback to client-only
+  function getLikedSet() {
+    const raw = localStorage.getItem('bb_likes');
+    try { return new Set(raw ? JSON.parse(raw) : []); } catch { return new Set(); }
+  }
+  function saveLikedSet(set) { localStorage.setItem('bb_likes', JSON.stringify(Array.from(set))); }
+
+  async function toggleLike(id) {
+    const li = document.querySelector(`.thread-item[data-id="${id}"]`);
+    if (!li) return;
+    const liked = getLikedSet();
+    let count = Number(li.getAttribute('data-likes') || '0');
+    if (liked.has(id)) {
+      liked.delete(id); count = Math.max(0, count - 1);
+    } else {
+      liked.add(id); count = count + 1;
+    }
+    li.setAttribute('data-likes', String(count));
+    const countEl = li.querySelector('.like-count'); if (countEl) countEl.textContent = String(count);
+    saveLikedSet(liked);
+    // persist liked set then reconcile all like buttons (list + modal)
+    updateLikeButtons();
+
+    // also update modal like count/icon if open
+    try {
+      const pdCount = document.getElementById('pd-like-count');
+      const pdBtn = document.getElementById('pd-like-btn');
+      const pdIcon = pdBtn ? pdBtn.querySelector('.like-icon') : null;
+      if (pdCount) pdCount.textContent = String(li.getAttribute('data-likes') || '0');
+      if (pdIcon) {
+        if (getLikedSet().has(id)) {
+          pdIcon.textContent = '❤';
+          pdIcon.classList.add('text-red-500');
+          pdIcon.classList.add('scale-110');
+          setTimeout(() => { try { pdIcon.classList.remove('scale-110'); } catch (err) { /* noop */ } }, 260);
+        } else {
+          pdIcon.textContent = '♡';
+          pdIcon.classList.remove('text-red-500');
+        }
+      }
+    } catch (err) { /* noop */ }
+
+    // optimistic: try to update in DB via server API (which will fall back to file if needed)
+    try {
+      // include user's access token so server can verify identity
+      const { data: _sess } = await supabase.auth.getSession();
+      const token = _sess?.session?.access_token || null;
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      await fetch('/api/posts', {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ id, likes: count }),
+      });
+    } catch (e) {
+      // ignore DB errors for now
+      console.debug('like update failed', e);
+    }
+  }
+
+  function updateLikeButtons() {
+    const liked = getLikedSet();
+    document.querySelectorAll('.like-btn').forEach((btn) => {
+      const id = btn.getAttribute('data-id');
+      const li = document.querySelector(`.thread-item[data-id="${id}"]`);
+      const countEl = btn.querySelector('.like-count');
+      const icon = btn.querySelector('.like-icon');
+      if (!li || !countEl || !icon) return;
+      const likes = li.getAttribute('data-likes') || '0';
+      countEl.textContent = likes;
+      if (liked.has(id)) {
+        // liked: filled red heart
+        icon.textContent = '❤';
+        icon.classList.add('text-red-500');
+      } else {
+        // not liked: outline heart
+        icon.textContent = '♡';
+        icon.classList.remove('text-red-500');
+      }
+    });
+  }
+
+  // Wire UI
+  document.addEventListener('DOMContentLoaded', async () => {
+    // If user landed here via Supabase magic link, the auth tokens may be in the URL fragment (#access_token=...)
+    // Try to extract and set the session so clicking the email link immediately signs the user in.
+    try {
+      if (typeof window !== 'undefined' && window.location && window.location.hash) {
+        const hash = window.location.hash.substring(1);
+        if (hash && hash.includes('access_token')) {
+          try {
+            const params = new URLSearchParams(hash);
+            const access_token = params.get('access_token');
+            const refresh_token = params.get('refresh_token');
+            const tokenType = params.get('type');
+            console.debug('[community] detected auth fragment', { tokenType });
+            if (access_token) {
+              // set session in supabase client (v2 API)
+              try {
+                await supabase.auth.setSession({ access_token, refresh_token });
+                // remove tokens from URL to avoid leaking in referrers
+                try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { /* noop */ }
+                // If this is a recovery (password reset) link, prompt user to set a new password
+                if (tokenType === 'recovery') {
+                  // quick prompt fallback: ask for new password and update user
+                  try {
+                    const newPwd = window.prompt('请输入新密码（至少 6 个字符）以完成密码重置：');
+                    if (newPwd && newPwd.length >= 6) {
+                      const upd = await supabase.auth.updateUser({ password: newPwd });
+                      if (upd.error) {
+                        console.warn('[community] updateUser failed', upd.error);
+                        showToast('设置新密码失败：' + (upd.error.message || String(upd.error)), 'error');
+                      } else {
+                        showToast('密码已重置并已登录', 'success');
+                      }
+                    } else {
+                      showToast('未设置新密码，若需要请重新发送密码重置邮件', 'warn');
+                    }
+                  } catch (e) {
+                    console.error('[community] recovery flow failed', e);
+                    showToast('密码重置失败，请重试', 'error');
+                  }
+                } else {
+                  showToast('验证成功，您已登录', 'success');
+                }
+              } catch (e) {
+                console.warn('[community] supabase.auth.setSession failed', e);
+                showToast('验证失败或链接已过期，请重试或重新发送验证邮件', 'error');
+              }
+            }
+          } catch (err) { console.error('failed to parse auth fragment', err); }
+        }
+      }
+    } catch (err) { console.error('auth fragment handling error', err); }
+
+    await initAuth();
+    await refreshPostList();
+
+    // --- Robust binding: attach listeners directly and log actions ---
+    const openRegisterBtn = document.getElementById('open-register-panel');
+    const openLoginBtn = document.getElementById('open-login-panel');
+    const closeAuthBtn = document.getElementById('close-auth-panel');
+    const headerRegisterForm = document.getElementById('header-registerForm');
+    const headerLoginForm = document.getElementById('header-loginForm');
+
+    console.log('[community] binding header auth elements', { openRegisterBtn: !!openRegisterBtn, openLoginBtn: !!openLoginBtn, headerRegisterForm: !!headerRegisterForm, headerLoginForm: !!headerLoginForm });
+
+    if (openRegisterBtn) {
+      openRegisterBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('[community] open-register clicked');
+        $('auth-panel')?.classList.remove('hidden');
+        headerRegisterForm?.classList.remove('hidden');
+        headerLoginForm?.classList.add('hidden');
+        $('h-reg-email')?.focus();
+      });
+    }
+    if (openLoginBtn) {
+      openLoginBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('[community] open-login clicked');
+        $('auth-panel')?.classList.remove('hidden');
+        headerLoginForm?.classList.remove('hidden');
+        headerRegisterForm?.classList.add('hidden');
+        $('h-login-email')?.focus();
+      });
+    }
+    if (closeAuthBtn) {
+      closeAuthBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        console.log('[community] close-auth clicked');
+        $('auth-panel')?.classList.add('hidden');
+      });
+    }
+
+    if (headerRegisterForm) {
+      headerRegisterForm.addEventListener('submit', (e) => { console.log('[community] header-registerForm submit'); return handleHeaderRegister(e); });
+    }
+    if (headerLoginForm) {
+      headerLoginForm.addEventListener('submit', (e) => { console.log('[community] header-loginForm submit'); return handleHeaderLogin(e); });
+    }
+
+    // like button delegation — require login before liking
+    document.body.addEventListener('click', async (e) => {
+      try {
+        const btn = e.target.closest && e.target.closest('.like-btn');
+        if (!btn) return;
+        e.preventDefault();
+        // ensure logged in (use cached CURRENT_USER to avoid an auth round-trip)
+        if (!CURRENT_USER) { showToast('请先登录以进行点赞', 'error'); $('open-login-panel')?.click(); return; }
+        await toggleLike(btn.getAttribute('data-id'));
+      } catch (err) {
+        console.error('[community] like delegation error', err);
+      }
+    });
+
+    // tabs — use event delegation on the container for more reliable handling
+    const tabsContainer = document.getElementById('community-tabs');
+    if (tabsContainer) {
+      tabsContainer.addEventListener('click', (ev) => {
+        try {
+          const btn = ev.target && ev.target.closest && ev.target.closest('.tab-btn');
+          if (!btn) return;
+          ev.preventDefault();
+          const mode = btn.getAttribute('data-mode');
+          console.log('[community] tab clicked', { mode });
+          document.querySelectorAll('#community-tabs .tab-btn').forEach((x) => x.classList.remove('bg-[#006994]', 'text-white'));
+          btn.classList.add('bg-[#006994]', 'text-white');
+
+          // basic client-side filtering for my-posts / my-liked
+          const list = $('thread-list');
+          if (!list) return;
+
+          // reset display for all items before applying a mode (prevents leftover 'display: none')
+          Array.from(list.children).forEach((li) => { li.style.display = ''; });
+
+          if (mode === 'my-posts') {
+            supabase.auth.getUser().then(({ data }) => {
+              const user = data?.user ?? null;
+              if (!list) return;
+              const myDisplay = user ? ((user.user_metadata && (user.user_metadata.username || user.user_metadata.name)) || ((user.email||'').split('@')[0])) : null;
+              Array.from(list.children).forEach((li) => {
+                const author = (li.getAttribute('data-author') || '').toLowerCase();
+                const my = myDisplay ? (String(myDisplay).toLowerCase() === author) : false;
+                li.style.display = my ? '' : 'none';
+              });
+            });
+          } else if (mode === 'my-liked') {
+            const liked = getLikedSet();
+            Array.from(list.children).forEach((li) => { li.style.display = liked.has(li.getAttribute('data-id')) ? '' : 'none'; });
+          } else if (mode === 'most-liked') {
+            // ensure all items visible before sorting
+            Array.from(list.children).forEach((li) => { li.style.display = ''; });
+            Array.from(list.children).sort((a,b)=>Number(b.getAttribute('data-likes'))-Number(a.getAttribute('data-likes'))).forEach(n=>list.appendChild(n));
+          } else { // latest
+            refreshPostList();
+          }
+        } catch (err) {
+          console.error('[community] tab click handler error', err);
+        }
+      });
+    }
+
+    // New topic button
+    $('open-new-topic')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const { data } = await supabase.auth.getUser();
+      if (!data?.user) { showToast('请先登录', 'error'); $('open-login-panel')?.click(); return; }
+      $('new-topic-modal')?.classList.remove('hidden'); $('new-topic-title')?.focus();
+    });
+
+    $('cancel-new-topic')?.addEventListener('click', (e) => { e.preventDefault(); $('new-topic-modal')?.classList.add('hidden'); });
+
+    // show supabase configuration warning early if env vars not present at build time
+    try {
+      const isSupabaseConfigured = Boolean(import.meta.env.PUBLIC_SUPABASE_URL && import.meta.env.PUBLIC_SUPABASE_ANON_KEY);
+      if (!isSupabaseConfigured) {
+        $('supabase-warning')?.classList.remove('hidden');
+      }
+    } catch (e) {
+      // import.meta may not be reachable in some contexts; ignore
+    }
+
+    $('new-topic-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const titleEl = $('new-topic-title');
+      const contentEl = $('new-topic-content');
+      const submitBtn = (e.target && e.target.querySelector && e.target.querySelector('button[type="submit"]')) || null;
+
+      const title = titleEl?.value?.trim();
+      const content = contentEl?.value?.trim();
+
+  // client-side validation
+  if (!title) return showToast('请提供标题', 'error');
+  if (title.length > 200) return showToast('标题长度不能超过 200 个字符', 'error');
+  if (!content || content.length < 10) return showToast('内容过短，至少 10 个字符', 'error');
+  if (content.length > 10000) return showToast('内容过长，请限制在 10000 个字符以内', 'error');
+
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user ?? null;
+    if (!user) return showToast('请先登录', 'error');
+
+  const display = (user.user_metadata && (user.user_metadata.username || user.user_metadata.name)) || ((user.email||'').split('@')[0]);
+  const payload = { title, content, author_display: display, likes: 0 };
+      console.log('[community] creating post', { payload, user });
+
+      // disable UI while submitting
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.setAttribute('aria-busy', 'true');
+        submitBtn.dataset.origText = submitBtn.textContent;
+        submitBtn.textContent = 'Posting...';
+      }
+
+      try {
+        // Try server-side proxy first (requires SUPABASE_SERVICE_ROLE_KEY configured on server)
+        let created = null;
+        try {
+          // include user's access token so server can verify identity
+          const { data: _sess } = await supabase.auth.getSession();
+          const token = _sess?.session?.access_token || null;
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) headers.Authorization = `Bearer ${token}`;
+          const resp = await fetch('/api/posts', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload),
+          });
+          if (resp.ok) {
+            const json = await resp.json();
+            created = Array.isArray(json.data) ? json.data[0] : json.data;
+          } else {
+            // server-side proxy not available or returned error -> fallback to client
+            const txt = await resp.text();
+            console.warn('[community] server /api/posts returned', resp.status, txt);
+          }
+        } catch (e) {
+          console.warn('[community] failed to call /api/posts, falling back to client supabase', e);
+        }
+
+        if (!created) {
+          const res = await supabase.from('posts').insert([payload]).select('*');
+          console.log('[community] supabase insert response (client)', res);
+          if (res.error) {
+            const msg = res.error.message || JSON.stringify(res.error);
+              showToast('发帖失败：' + msg + '\n(查看控制台获取更多详情)', 'error');
+            const warn = $('supabase-warning-text');
+            if (warn) warn.textContent = '发帖失败：' + msg + '（检查 Supabase 表和 RLS 策略）';
+            return;
+          }
+          created = Array.isArray(res.data) ? res.data[0] : res.data;
+        }
+
+        // success: optimistically insert the created row into the list so users see it immediately
+        // then refresh from server shortly after to reconcile authoritative data
+        try {
+          if (created) {
+            // ensure minimal fields exist
+            if (!created.id) created.id = 'local-' + Date.now().toString(36);
+            if (!created.created_at) created.created_at = new Date().toISOString();
+            // mark as pending until server confirms with a real id
+            if (!String(created.id).startsWith('local-')) {
+              // server returned real id -> remove any matching pending entries
+              try { removePendingMatching(created); } catch (e) { /* noop */ }
+            } else {
+              try { addPendingPost(created); } catch (e) { /* noop */ }
+            }
+            const list = document.getElementById('thread-list');
+            if (list) {
+              const existing = document.querySelector(`.thread-item[data-id="${created.id}"]`);
+              if (!existing) {
+                const el = createPostElement(created);
+                list.insertBefore(el, list.firstChild);
+                updateLikeButtons();
+                // highlight & scroll into view
+                el.classList.add('ring-2', 'ring-[#006994]');
+                setTimeout(() => el.classList.remove('ring-2', 'ring-[#006994]'), 4000);
+                try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { /* noop */ }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[community] optimistic insert failed', e);
+        }
+
+        // close modal and clear form
+        $('new-topic-modal')?.classList.add('hidden');
+        if (titleEl) titleEl.value = '';
+        if (contentEl) contentEl.value = '';
+
+        // schedule a full refresh to reconcile with server data
+        setTimeout(() => refreshPostList(), 800);
+      } catch (err) {
+        console.error('[community] create post error', err);
+    showToast('发帖时发生异常，请查看控制台以获取更多信息', 'error');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.removeAttribute('aria-busy');
+          submitBtn.textContent = submitBtn.dataset.origText || 'Post';
+          delete submitBtn.dataset.origText;
+        }
+      }
+    });
+  });
+</script>

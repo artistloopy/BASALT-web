@@ -1,0 +1,199 @@
+---
+import Layout from '~/layouts/LandingLayout.astro';
+
+import CallToAction from '~/components/widgets/CallToAction.astro';
+
+const metadata = {
+  title: 'Sales Landing Page Demo',
+};
+---
+
+<Layout metadata={metadata}>
+  <!-- Operating Guidance: two-column layout (left TOC, right content) -->
+
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <!-- Left: Table of contents -->
+      <aside class="md:col-span-1">
+        <nav class="sticky top-24 bg-[#006994] p-4 rounded-md">
+          <h1 class="text-sm font-semibold text-white mb-4">Contents</h1>
+          <ul class="space-y-3">
+            <li>
+              <a href="#overview" class="text-white text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Overview</a>
+            </li>
+            <li>
+              <a href="#requirements" class="text-white text-base font-semibold block hover:underline hover:text-blue-100 toc-link">System requirements</a>
+              <ul class="mt-2 space-y-1">
+                <li><a href="#requirements-hardware" class="text-white text-sm block pl-4 toc-sub-link">Hardware</a></li>
+                <li><a href="#requirements-software" class="text-white text-sm block pl-4 toc-sub-link">Software</a></li>
+              </ul>
+            </li>
+            <li>
+              <a href="#installation" class="text-white text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Installation steps</a>
+              <ul class="mt-2 space-y-1">
+                <li><a href="#installation-clone" class="text-white text-sm block pl-4 toc-sub-link">Clone repository</a></li>
+                <li><a href="#installation-environment" class="text-white text-sm block pl-4 toc-sub-link">Set up environment</a></li>
+              </ul>
+            </li>
+            <li>
+              <a href="#configuration" class="text-white text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Configuration</a>
+            </li>
+            <li>
+              <a href="#usage" class="text-white text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Basic usage</a>
+            </li>
+            <li>
+              <a href="#troubleshooting" class="text-white text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Troubleshooting</a>
+            </li>
+            <li>
+              <a href="#qa" class="text-white text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Q&amp;A</a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      <!-- Right: Content with headings and subheadings -->
+      <main class="md:col-span-3 prose prose-lg dark:prose-invert">
+        <section id="overview">
+          <h1>Overview</h1>
+          <p>
+            BASALT is a versatile toolkit that supports the generation of high-quality MAGs from a range of data types, including pure second-generation sequence assemblies, pure third-generation sequence assemblies, and hybrid assemblies combining second- and third-generation data. BASALT features the following capabilities:
+          <p>1) BASALT supports mutual refinement of multiple assembly files
+          <br>2) Deep learning-based refinement modules significantly enhance genome quality
+          <br>3) BASALT includes substantial optimizations for polishing workflows and reassembly</p>
+          <p>If you encounter any issues, please contact us directly by emailing <a href="mailto:yuke.sz@pku.edu.cn" class="text-[#006994] underline">yuke.sz@pku.edu.cn</a> for feedback. We will continue to enhance the functionality of the entire software package. Thank you!</p>
+
+          </p>
+        </section>
+
+        <section id="requirements">
+          <h2>System requirements</h2>
+          <h3 id="requirements-hardware">Hardware</h3>
+          <p>Recommended: Linux x64 system</p>
+          <h3 id="requirements-software">Software</h3>
+          <p>Requires Python, Conda, and standard bioinformatics tools. See the full dependency list below.</p>
+        </section>
+
+        <section id="installation">
+          <h2>Installation steps</h2>
+          <h3 id="installation-clone">1. Clone repository</h3>
+          <p>Clone the project from GitHub: <code>git clone https://github.com/EMBL-PKU/BASALT.git</code></p>
+          <h3 id="installation-environment">2. Set up environment</h3>
+          <p>Use Conda to create the environment and install dependencies. Follow the project's README for exact commands.</p>
+        </section>
+
+        <section id="configuration">
+          <h2>Configuration</h2>
+          <h3>Default parameters</h3>
+          <p>Explain default config files and recommended overrides for common scenarios.</p>
+        </section>
+
+        <section id="usage">
+          <h2>Basic usage</h2>
+          <h3>Run a simple pipeline</h3>
+          <p>Provide command examples and expected outputs.</p>
+        </section>
+
+        <section id="troubleshooting">
+          <h2>Troubleshooting</h2>
+          <h3>Common errors</h3>
+          <p>List common problems and their solutions.</p>
+        </section>
+
+        <section id="qa">
+          <h2>Q&amp;A</h2>
+
+          <h3>1. Why Choose BASALT</h3>
+          <p>
+            BASALT delivers powerful microbiome analysis capabilities (especially in metagenomics), offering high efficiency and exceptional data compatibility. It uncovers more microbial genomes with MAG redundancy removal rates reaching 99% at the species level and contamination removal rates as high as 60%–95%. Additionally, it can further refine data generated by other software.
+          </p>
+
+          <h3>2. Is BASALT available for free?</h3>
+          <p>
+            BASALT is completely free and open-source software. You can freely access the source code and documentation from the official GitHub repository (<a class="text-[#006994] underline" href="https://github.com/EMBL-PKU/BASALT" target="_blank">https://github.com/EMBL-PKU/BASALT</a>). Developed and maintained by a research team at Peking University, it embraces the open-source spirit and welcomes users to utilize, provide feedback, and collaborate on improvements.
+          </p>
+
+          <h3>3. How to get BASALT?</h3>
+          <p>
+            BASALT supports Linux x64 environments. Users in China are recommended to install via manual configuration with Conda. Detailed operational guides are provided in the official Chinese documentation.
+          </p>
+
+          <h3>4. What does BASALT's community support offer?</h3>
+          <p>
+            Our community provides comprehensive official Chinese documentation covering everything from installation and parameter configuration to troubleshooting. BASALT remains under active development and optimization. The community will synchronously update resources for the latest versions and welcomes all users to engage in collaborative learning and discussion.
+          </p>
+
+        </section>
+      </main>
+    </div>
+  </section>
+
+  <CallToAction
+    title="Coming soon"
+    subtitle="We are working on the content of these demo pages. You will see them very soon. Stay tuned Stay tuned!"
+    actions={[
+      {
+        variant: 'primary',
+        text: 'Download Template',
+        href: 'https://github.com/arthelokyo/astrowind',
+        icon: 'tabler:download',
+      },
+    ]}
+  />
+  <script type="module">
+    // Scrollspy: highlight TOC links based on section in view
+    const links = Array.from(document.querySelectorAll('.toc-link, .toc-sub-link'));
+    const idToLink = new Map(links.map(l => [l.getAttribute('href').slice(1), l]));
+    const ids = Array.from(idToLink.keys());
+    const observed = ids.map(id => document.getElementById(id)).filter(Boolean);
+
+    if (observed.length) {
+      const observer = new IntersectionObserver((entries) => {
+        // find entry with largest intersectionRatio that's intersecting
+        const visible = entries.filter(e => e.isIntersecting).sort((a,b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible.length) {
+          const id = visible[0].target.id;
+          // clear all
+          links.forEach(l => l.classList.remove('font-bold', 'underline', 'text-blue-100'));
+          const active = idToLink.get(id);
+          if (active) active.classList.add('font-bold', 'underline', 'text-blue-100');
+        }
+      }, { root: null, rootMargin: '-30% 0px -60% 0px', threshold: [0, 0.25, 0.5, 0.75] });
+
+      observed.forEach(el => observer.observe(el));
+    }
+
+    // Helper: find the first heading inside a section (h1-h5). If none found, use the section itself.
+    function findHeadingInSection(section) {
+      if (!section) return null;
+      const heading = section.querySelector('h1, h2, h3, h4, h5');
+      return heading || section;
+    }
+
+    // make clicking a link set active immediately and scroll with offset so the heading is visible
+    links.forEach(l => l.addEventListener('click', (e) => {
+      e.preventDefault();
+      links.forEach(x => x.classList.remove('font-bold', 'underline', 'text-blue-100'));
+      l.classList.add('font-bold', 'underline', 'text-blue-100');
+
+      const targetId = l.getAttribute('href').slice(1);
+      const section = document.getElementById(targetId);
+      const target = findHeadingInSection(section);
+      if (target) {
+        // compute header/sticky offset; fall back to 24px if not found
+        const header = document.querySelector('header, .site-header, .top-0');
+        const headerHeight = header ? header.getBoundingClientRect().height : 24;
+        // Scroll to the heading's top so the heading itself is visible (accounts for heading margin)
+        const top = target.getBoundingClientRect().top + window.scrollY - headerHeight - 12; // extra gap
+        window.scrollTo({ top, behavior: 'smooth' });
+        // temporary highlight on right-side section (highlight the section container if present)
+        if (section) {
+          section.classList.add('section-highlight');
+          setTimeout(() => section.classList.remove('section-highlight'), 1800);
+        } else {
+          target.classList.add('section-highlight');
+          setTimeout(() => target.classList.remove('section-highlight'), 1800);
+        }
+      }
+    }));
+  </script>
+</Layout>

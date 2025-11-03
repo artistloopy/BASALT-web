@@ -1,0 +1,293 @@
+---
+import Layout from '~/layouts/PageLayout.astro';
+import { getPermalink } from '~/utils/permalinks';
+
+import Hero from '~/components/widgets/Hero.astro';
+import Note from '~/components/widgets/Note.astro';
+import Features from '~/components/widgets/Features.astro';
+import Features2 from '~/components/widgets/Features2.astro';
+// removed unused Steps and Content imports
+import Headline from '~/components/ui/Headline.astro';
+import WidgetWrapper from '~/components/ui/WidgetWrapper.astro';
+import BlogLatestPosts from '~/components/widgets/BlogLatestPosts.astro';
+import FAQs from '~/components/widgets/FAQs.astro';
+import Stats from '~/components/widgets/Stats.astro';
+// CallToAction import removed because the bottom download box was removed
+// removed unused ImageNotFound import
+
+const metadata = {
+  title: 'BASALT Hub — Home',
+  ignoreTitleTemplate: true,
+};
+
+// Server-side: fetch live stats (GitHub releases/stars/forks and Crossref citations)
+async function fetchGitHubStats(repoFullName: string) {
+  try {
+    const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json' };
+    if (process.env.GITHUB_TOKEN) headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+
+    // Repo info (stars, forks)
+    const repoRes = await fetch(`https://api.github.com/repos/${repoFullName}`, { headers });
+    if (!repoRes.ok) throw new Error(`GitHub repo fetch failed: ${repoRes.status}`);
+    const repoJson = await repoRes.json();
+    const stars = Number(repoJson.stargazers_count) || 0;
+    const forks = Number(repoJson.forks_count) || 0;
+
+    // Releases -> sum download_count on assets
+    let downloads = 0;
+    try {
+      const relRes = await fetch(`https://api.github.com/repos/${repoFullName}/releases`, { headers });
+      if (relRes.ok) {
+        const relJson = await relRes.json();
+        if (Array.isArray(relJson)) {
+          for (const r of relJson) {
+            if (Array.isArray(r.assets)) {
+              for (const a of r.assets) {
+                downloads += Number(a.download_count) || 0;
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore release errors, fallback to 0
+    }
+
+    return { stars, forks, downloads };
+  } catch (error) {
+    console.warn('fetchGitHubStats error:', error);
+    return null;
+  }
+}
+
+async function fetchCrossrefCitations(doi: string) {
+  try {
+    const url = `https://api.crossref.org/works/${encodeURIComponent(doi)}`;
+    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`Crossref fetch failed: ${res.status}`);
+    const j = await res.json();
+    const count = Number(j?.message?.['is-referenced-by-count']) || 0;
+    return count;
+  } catch (error) {
+    console.warn('fetchCrossrefCitations error:', error);
+    return null;
+  }
+}
+
+function formatShort(n: number) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(n);
+}
+
+// Attempt to fetch live data; fall back to existing static values when unavailable
+const _repo = 'EMBL-PKU/BASALT';
+const _doi = '10.1038/s41467-024-46539-7';
+const _github = (await fetchGitHubStats(_repo)) || { stars: 24800, forks: 10300, downloads: 132000 };
+const _citations = (await fetchCrossrefCitations(_doi)) ?? 48400;
+
+const statsData = [
+  { title: 'Downloads', amount: formatShort(Number(_github.downloads || 0)) },
+  { title: 'Stars', amount: formatShort(Number(_github.stars || 0)) },
+  { title: 'Forks', amount: formatShort(Number(_github.forks || 0)) },
+  { title: 'Citations', amount: formatShort(Number(_citations || 0)) },
+];
+---
+
+<Layout metadata={metadata}>
+  <!-- Hero Widget ******************* -->
+
+  <Hero
+    actions={[
+      {
+        variant: 'primary',
+        text: 'Download',
+        href: 'https://github.com/EMBL-PKU/BASALT/tree/master',
+        target: '_blank',
+        icon: 'tabler:download',
+      },
+      { text: 'Learn more', href: '#features' },
+    ]}
+    image={{ src: '~/assets/images/hero-image.png', alt: 'AstroWind Hero Image' }}
+  >
+    <Fragment slot="title">
+      <span class="text-[#253745] dark:text-slate-200">BASALT — <span class="text-[#006994]">High Precision Capture Tool</span> for Complex Microbiome Genomes</span>
+    </Fragment>
+
+    <Fragment slot="subtitle">
+      <span class="hidden sm:inline">
+        BASALT is a bioinformatics tool focused on metagenomic assembly and optimization, enabling researchers to efficiently and accurately extract high-quality microbial genomes from complex microbial community sequencing data.
+      </span>
+    </Fragment>
+  </Hero>
+
+  <!-- Note Widget ******************* -->
+
+  <Note icon="" title="BASALT——" description="Comprehensive, Convenience, and Efficiency" />
+
+  <!-- Features Widget *************** -->
+
+  <Features
+    id="features"
+    tagline="Features" 
+    title="What BASALT provides"
+    subtitle="BASALT leverages AI agents to enhance the entire field of microbiome analysis, particularly in the realm of metagenomics."
+    items={[
+      {
+        title: 'High Efficiency',
+        description:
+          'BASALT significantly enhances data utilization and computational efficiency through core sequence recognition, MAGs deduplication algorithms, and colinearity data filtering. It removes contamination, recovers lost genomic fragments, and prevents redundant genome generation.',
+        icon: 'tabler:brand-tailwind',
+      },
+      {
+        title: 'Robust Data Compatibility',
+        description:
+          'Supports diverse data types and combined inputs, including contigs from second-generation (SEG) single-read data, third-generation (TEG) single-read data, and SEG-TEG mixed-read data. Additionally, it supports serial data analysis, such as mixed analysis of metagenomics, Hi-C, and single-cell sequencing data.',
+        icon: 'tabler:components',
+      },
+      {
+        title: 'Free and Open-Source',
+        description:
+          'BASALT provides free, open-source technology for high-precision capture of complex microbial community genomes. Users can download and use it at no cost, with detailed download tutorials and usage instructions available on the website.',
+        icon: 'tabler:list-check',
+      },
+      {
+        title: 'More Discoveries',
+        description:
+          'BASALT uncovers more gene fragments and identifies more low-abundance microbial genomes. In actual salt lake microbial communities, BASALT identified 1.41 times more medium-to-high-quality genomes than mainstream tools, including unique and novel taxonomic units.',
+        icon: 'tabler:rocket',
+      },
+      {
+        title: 'Data refinement',
+        description:
+          "Even contig assembly results generated by non-BASALT tools can undergo deep optimization through its refinement module.",
+        icon: 'tabler:arrows-right-left',
+      },
+      {
+        title: 'Community support',
+        description:
+          'The development team provides official Chinese documentation, domestic mirror download resources, and regular feature updates to ensure users consistently access the latest technical solutions.',
+        icon: 'tabler:bulb',
+      },
+    ]}
+  />
+
+    <!-- Stats Widget ****************** -->
+
+  <Stats stats={statsData} />
+
+  <!-- Features2 Widget ************** -->
+
+  <Features2
+    id="more-resources"
+    title="More learning resources"
+    subtitle="Provide more tutorials and documentation"
+    tagline="Resource center"
+    classes={{ container: 'text-black', headline: { tagline: 'text-base text-white font-bold tracking-wide uppercase', title: 'text-white', subtitle: 'text-white/90' } }}
+    items={[
+      {
+        title: 'Guidance file',
+        description: "Step-by-step manuals and best-practice guides for installing, configuring, and using BASALT.",
+        icon: 'flat-color-icons:template',
+      },
+      {
+        title: 'Test data',
+        description:
+          "Small example files designed for quick validation and demonstration of workflows.",
+        icon: 'flat-color-icons:gallery',
+      },
+      {
+        title: 'Datasets',
+        description:
+          'Curated datasets for benchmarking and research; larger files for real-world testing.',
+        icon: 'flat-color-icons:approval',
+      },
+      {
+        title: 'Scirpts',
+        description:
+          "Reusable analysis and automation scripts (Python) used in BASALT pipelines.",
+        icon: 'flat-color-icons:document',
+      },
+      {
+        title: 'Video tutorial',
+        description: 'Short step-by-step video walkthroughs covering installation, common workflows, and practical examples to get you started quickly.',
+        icon: 'flat-color-icons:advertising',
+      },
+      {
+        title: 'Common questions',
+        description: 'Answers to frequently asked questions about installation, usage, troubleshooting, and best practices for BASALT.',
+        icon: 'flat-color-icons:currency-exchange',
+      },
+    
+    ]}
+  >
+    <Fragment slot="bg">
+      <div class="absolute inset-0 bg-[#006994] dark:bg-[#004f66]"></div>
+    </Fragment>
+  </Features2>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-0 -mt-12 relative z-50 pointer-events-auto">
+    <div class="flex justify-end">
+      <p class="text-sm">
+        <a href={getPermalink('/resource-center')} class="text-white underline transform transition-transform duration-200 ease-out hover:scale-110 hover:font-semibold hover:text-[#F9F2E0]">Resource center →</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- HighlightedPosts Widget ******* -->
+
+  <BlogLatestPosts
+    id="more-contents"
+    title="More contents"
+  />
+
+  <!-- FAQs Widget ******************* -->
+
+  <FAQs
+    id="q-and-a"
+    title="Questions & Answers"
+    subtitle="User ask these questions most often"
+    tagline="Q&A"
+    classes={{ container: 'max-w-6xl' }}
+    items={[
+      {
+        title: 'Why Choose BASALT',
+        description:
+          "BASALT delivers powerful microbiome analysis capabilities (especially in metagenomics), offering high efficiency and exceptional data compatibility. It uncovers more microbial genomes with MAG redundancy removal rates reaching 99% at the species level and contamination removal rates as high as 60%-95%. Additionally, it can further refine data generated by other software.",
+      },
+      {
+        title: 'Is BASALT available for free?',
+        description:
+          'BASALT is completely free and open-source software. You can freely access the source code and documentation from the official GitHub repository (https://github.com/EMBL-PKU/BASALT). Developed and maintained by a research team at Peking University, it embraces the open-source spirit and welcomes users to utilize, provide feedback, and collaborate on improvements.',
+      },
+      {
+        title: 'How to get BASALT?',
+        description:
+          "BASALT supports Linux x64 environments. Users in China are recommended to install via manual configuration with Conda. Detailed operational guides are provided in the official Chinese documentation.",
+      },
+      {
+        title: "What does BASALT's community support offer?",
+        description:
+          "Our community provides comprehensive official Chinese documentation covering everything from installation and parameter configuration to troubleshooting. BASALT remains under active development and optimization. The community will synchronously update resources for the latest versions and welcomes all users to engage in collaborative learning and discussion.",
+      },
+     
+    ]}
+  />
+
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 py-0 -mt-8 relative z-10 pointer-events-auto">
+    <div class="flex justify-end">
+        <p class="text-sm">
+  <a href={getPermalink('/landing/operating-guidance') + '#qa'} class="text-[#006994] underline transform transition-transform duration-200 ease-out hover:scale-110 hover:font-semibold hover:text-[#004f66]">More questions →</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- Funding (styled like FAQs headline) -->
+  <WidgetWrapper id="funding" containerClass="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+    <Headline tagline="Funding" title="Support and funding" subtitle="Funding support is provided by Peking University EMBL." />
+   
+  </WidgetWrapper>
+
+  
+  <!-- CallToAction Widget removed per request -->
+</Layout>

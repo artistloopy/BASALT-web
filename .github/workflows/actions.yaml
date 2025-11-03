@@ -1,0 +1,59 @@
+name: GitHub Actions
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version:
+          - 18
+          - 20
+          - 22
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js v${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Debug info (node / pnpm / files)
+        run: |
+          echo "== node version =="; node -v || true
+          echo "== npm version =="; npm -v || true
+          echo "== pnpm version (after setup) =="; pnpm -v || true
+          echo "== workspace files =="; ls -la
+          echo "== package.json =="; cat package.json
+          echo "== pnpm-lock.yaml head =="; head -n 20 pnpm-lock.yaml || true
+      - name: Install dependencies (pnpm)
+        run: pnpm install --frozen-lockfile --reporter ndjson || pnpm install --reporter ndjson
+      - name: Build
+        run: pnpm run build
+      # - run: npm test
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - name: Install dependencies (pnpm)
+        run: pnpm install --frozen-lockfile
+      - name: Run checks
+        run: pnpm run check

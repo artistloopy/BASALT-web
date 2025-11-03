@@ -1,0 +1,625 @@
+---
+import Layout from '~/layouts/LandingLayout.astro';
+
+import CallToAction from '~/components/widgets/CallToAction.astro';
+
+const metadata = {
+  title: 'Operating Guidance',
+};
+---
+
+<Layout metadata={metadata}>
+  <!-- Operating Guidance: two-column layout (left TOC, right content) -->
+
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <!-- Left: Table of contents -->
+      <aside class="md:col-span-1">
+  <nav class="sticky top-24 bg-[#006994] p-4 rounded-md max-h-[70vh] overflow-y-auto pr-2">
+          <h1 class="text-xl md:text-2xl font-extrabold text-white mb-4">Guidance</h1>
+          <ul class="space-y-3">
+            <li>
+              <a href="#overview" class="text-white no-underline text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Overview</a>
+            </li>
+            <li>
+              <a href="#input-data" class="text-white no-underline text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Type of input data</a>
+            </li>
+            <li>
+              <a href="#requirements" class="text-white no-underline text-base font-semibold block hover:underline hover:text-blue-100 toc-link">System requirements</a>
+              <ul class="mt-2 space-y-1">
+                <li><a href="#requirements-hardware" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">Hardware</a></li>
+                <li><a href="#requirements-software" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">Software</a></li>
+              </ul>
+            </li>
+            <li>
+              <div class="flex items-center justify-between">
+                <a href="#installation" class="text-white no-underline text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Installation steps</a>
+                <button type="button" class="toc-toggle text-white ml-2 p-1 rounded-md" data-target="installation-sub" aria-expanded="true" aria-label="Toggle installation subitems">
+                  <svg class="w-4 h-4 transition-transform" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 011.08 1.04l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z"/></svg>
+                </button>
+              </div>
+              <ul id="installation-sub" class="mt-2 space-y-1">
+                <li><a href="#installation-quick" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">Quick installation</a></li>
+                <li><a href="#installation-china" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">Quick installation (China mainland)</a></li>
+                <li><a href="#installation-manual" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">Manual installation</a></li>
+                <li><a href="#installation-singularity" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">Another mothod</a></li>
+                <li><a href="#installation-testfiles" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">Test files</a></li>
+                <li><a href="#demo-dataset" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">Demo dataset</a></li>
+              </ul>
+            </li>
+
+            <!-- Top-level Demo dataset entry matching Installation steps style -->
+            <li>
+              <div class="flex items-center justify-between">
+                <a href="#demo-dataset" class="text-white no-underline text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Demo dataset</a>
+              </div>
+              <ul id="demo-dataset-sub" class="mt-2 space-y-1 hidden">
+                <!-- reserved for future subitems -->
+              </ul>
+            </li>
+            <!-- Removed duplicate top-level 'Usage' TOC entry; 'Basic usage' remains below -->
+              <li>
+                <div class="flex items-center justify-between">
+                  <a href="#usage" class="text-white no-underline text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Basic usage</a>
+                  <button type="button" class="toc-toggle text-white ml-2 p-1 rounded-md" data-target="usage-sub" aria-expanded="true" aria-label="Toggle usage subitems">
+                    <svg class="w-4 h-4 transition-transform" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 011.08 1.04l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z"/></svg>
+                  </button>
+                </div>
+                <ul id="usage-sub" class="mt-2 space-y-1">
+                  <li><a href="#usage-general" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">General usage</a></li>
+                  <li><a href="#usage-examples" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">Example runs</a></li>
+                </ul>
+              </li>
+            <li>
+              <div class="flex items-center justify-between">
+                <a href="#troubleshooting" class="text-white no-underline text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Troubleshooting</a>
+                <button type="button" class="toc-toggle text-white ml-2 p-1 rounded-md" data-target="troubleshooting-sub" aria-expanded="true" aria-label="Toggle troubleshooting subitems">
+                  <svg class="w-4 h-4 transition-transform" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 011.08 1.04l-4.25 4.25a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z"/></svg>
+                </button>
+              </div>
+              <ul id="troubleshooting-sub" class="mt-2 space-y-1">
+                <li><a href="#troubleshooting-samtools" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">SAMtools install error</a></li>
+                <li><a href="#troubleshooting-indexerror" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">IndexError: list index out of range</a></li>
+                <li><a href="#troubleshooting-lrs-mode" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">LRS-only mode issue</a></li>
+                <li><a href="#troubleshooting-checkm2" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">CheckM2 database missing</a></li>
+                <li><a href="#troubleshooting-notfound" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">BASALT: command not found</a></li>
+                <li><a href="#troubleshooting-qualityreport" class="text-white text-sm block pl-4 no-underline hover:underline toc-sub-link">quality_report.tsv not found</a></li>
+              </ul>
+            </li>
+            <li>
+              <a href="#qa" class="text-white no-underline text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Q&amp;A</a>
+            </li>
+            <li>
+              <a href="#cite" class="text-white no-underline text-base font-semibold block hover:underline hover:text-blue-100 toc-link">Cite our article</a>
+            </li>
+            <li>
+              <a href="#references" class="text-white no-underline text-base font-semibold block hover:underline hover:text-blue-100 toc-link">References</a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+  <!-- Right: Content with headings and subheadings -->
+  <!-- remove prose max-width so content fills the column and reduces right-side empty space -->
+  <main class="md:col-span-3 prose prose-lg max-w-none dark:prose-invert">
+        <section id="overview">
+          <h1>Overview</h1>
+          <p>
+            BASALT is a versatile toolkit that supports the generation of high-quality MAGs from a range of data types, including pure second-generation sequence assemblies, pure third-generation sequence assemblies, and hybrid assemblies combining second- and third-generation data. BASALT features the following capabilities:
+          <p>1) BASALT supports mutual refinement of multiple assembly files
+          <br>2) Deep learning-based refinement modules significantly enhance genome quality
+          <br>3) BASALT includes substantial optimizations for polishing workflows and reassembly</p>
+
+          </p>
+        </section>
+
+        <section id="input-data">
+          <h2>Type of input data for BASALT</h2>
+          <p>BASALT is a versatile tool with high efficiency for binning and post-binning refinement. BASALT can generate high quality metagenome-assembled genomes (MAGs) from various input data types including:
+            <p></p> 1) assembly from short-read sequences (SRS); <br>2) assembly from long-read sequences (LRS); [Note: only PacBio-HiFi data is supported in the current version for long-read only assemblies, other types of LRS data will be available in later versions.] <br>3) hybrid assembly from SRS + LRS. Specific features of BASALT are listed below:</p>
+
+          <p>1.Multiple assemblies as input with dereplication function BASALT developed a comprehensive method incorporating multiple assembly files, including single assemblies (SAs) and co-assemblies (CAs) in one run. Additionally, a dereplication step is applied after initial binning to efficiently remove redundant bins. Comparatively, prominent binning tools such as metaWRAP [1] and DASTool [2] only support single assembly file as input, where multiple binning processes are required if there are multiple assembly files in a dataset. Moreover, redundant bins generated under SA + CA mode need to be removed using dereplication tools such as dRep [3]. Although BASALT takes longer time than metaWRAP and DASTool in one single run, considerable amount of time will be saved when processing multiple assembly files, and a significantly more and better quality MAGs can be generated by BASALT than other tools, based on our assessment [4].</p>
+
+          <p>2.Standalone Refinement module BASALT can effectively identify and remove potential contamination sequences in Refinement module based on neural networks. Specifically, users can import their bins along with raw sequences to BASALT to run the Refinement module independently without initial binning using BASALT.</p>
+
+          <p>3.High read use efficiency of LRS BASALT maximized the utilization of LRS in the post-binning refinement steps. Firstly, LRS will be used at Sequence retrieval step by recruiting unused sequences to target bins via pair-end tracking. After processing the Sequence retrieval function, an extra polishing step will be performed in the existence of LRS. Polishing at this step will save ~90% of the computation time than conducting at assembly step with same iterations, as the data size is largely reduced. Furthermore, LRS will be exploited again at reassembly step using the SPAdes Hybrid function (default). [Note: reassembly function is not applicable on LRS-alone dataset in the current version of BASALT, but will be available in later version.] Although reassembly may take a considerable amount of time, large augmentation of genome quality can be observed after reassembly. For any issue compiling and running BASALT, as well as bug report, please do not hesitate to contact us (<a href="mailto:yuke.sz@pku.edu.cn" class="text-[#006994] underline">yuke.sz@pku.edu.cn</a>). Thanks for using BASALT!</p>
+
+
+        <section id="requirements">
+          <h2>System requirements</h2>
+          <h3 id="requirements-hardware">Hardware</h3>
+          <p>Linux x64 systems, 8+ cores, and 128GB+ RAM</p>
+          <h3 id="requirements-software">Software</h3>
+          <p>Required software and tools for BASALT:</p>
+          <ul>
+            <li>Python (&gt;=3.0) modules: biopython, pandas, numpy, scikit-learn, copy, multiprocessing, collections, pytorch, tensorboardx</li>
+            <li>Perl</li>
+            <li>Java (&gt;=1.7)</li>
+            <li>Binning tools: MetaBAT2, Maxbin2, CONCOCT, Semibin2, Metabinner</li>
+            <li>Note: VAMB was previously implemented in BASALT, but due to environment conflicts and unsatisfactory performance on environmental datasets, it was temporarily removed. Bins generated by VAMB can still be imported to BASALT for post-binning refinements.</li>
+            <li>Sequence processing tools: Bowtie2, BWA, SAMtools, Prodigal, BLAST+, HMMER, Minimap2</li>
+            <li>Sequence assembly and polishing tools: SPAdes, IDBA-UD, Pilon, Racon, Unicycler</li>
+            <li>Genome quality assessment tools: CheckM, CheckM2, pplacer</li>
+            <li>Note: CheckM2 database is not compiled with BASALT v1.0.1. To set up the CheckM2 database, see the CheckM2 user guide: <a class="text-[#006994] underline decoration-2 decoration-[#006994]" href="https://github.com/chklovski/CheckM2" target="_blank">https://github.com/chklovski/CheckM2</a></li>
+          </ul>
+        </section>
+
+        <section id="installation">
+          <h2>Installation steps</h2>
+
+          <h3 id="installation-quick">1. Quick installation</h3>
+          <p>Download <code>BASALT_setup.py</code> and run:</p>
+          <pre><code>python BASALT_setup.py</code></pre>
+          <p>Please remain patient, as the installation process may take an extended period.</p>
+
+          <h3 id="installation-china">2. Quick installation (China mainland)</h3>
+          <p>For users in China mainland who may experience network issues, download the alternative script <code>BASALT_setup_China_mainland.py</code> and run:</p>
+          <pre><code>python BASALT_setup_China_mainland.py</code></pre>
+          <p>Then, download the trained models for neural networks <code>BASALT.zip</code> from Tencent iCloud (<a class="text-[#006994] underline" href="https://share.weiyun.com/r33c2gqa" target="_blank">https://share.weiyun.com/r33c2gqa</a>) and run:</p>
+          <pre><code>mv BASALT.zip ~/.cache
+cd ~/.cache
+unzip BASALT.zip</code></pre>
+
+          <h3 id="installation-manual">3. Manual installation (recommended)</h3>
+          <p>Install Miniconda (<a class="text-[#006994] underline" href="https://docs.anaconda.com/free/miniconda/miniconda-install/" target="_blank">https://docs.anaconda.com/free/miniconda/miniconda-install/</a>) or Anaconda (<a class="text-[#006994] underline" href="https://docs.anaconda.com/free/anaconda/install/index.html" target="_blank">https://docs.anaconda.com/free/anaconda/install/index.html</a>).</p>
+
+          <p>Add mirrors to increase download speed of BASALT dependent software (optional):</p>
+          <pre><code>site=https://mirrors.tuna.tsinghua.edu.cn/anaconda
+conda config --add channels &#36;&#123;site&#125;/pkgs/free/
+conda config --add channels &#36;&#123;site&#125;/pkgs/main/
+conda config --add channels &#36;&#123;site&#125;/cloud/conda-forge/
+conda config --add channels &#36;&#123;site&#125;/cloud/bioconda/</code></pre>
+
+          <p>Download the BASALT installation file and create a conda environment:</p>
+          <pre><code>git clone https://github.com/EMBL-PKU/BASALT.git
+cd BASALT
+conda env create -n BASALT --file basalt_env.yml</code></pre>
+          <p>Please remain patient, as the installation process may take an extended period.</p>
+
+          <p>If you have encountered an error, download <code>basalt_env.yml</code> from Tencent iCloud (<a class="text-[#006994] underline" href="https://share.weiyun.com/xXdRiDkl" target="_blank">https://share.weiyun.com/xXdRiDkl</a>) and create the conda environment:</p>
+          <pre><code>conda env create -n BASALT --file basalt_env.yml</code></pre>
+
+          <p>After successfully creating the conda environment, change file permissions for BASALT script files:</p>
+          <pre><code>chmod -R 777 &lt;PATH_TO_CONDA&gt;/envs/BASALT/bin/*</code></pre>
+          <p>Example: to easily find your path to conda environments, simply use:</p>
+          <pre><code>conda info --envs</code></pre>
+          <p>and you can find your path to BASALT environment, such as:</p>
+          <pre><code># conda environments:
+#
+base     /home/emma/miniconda3
+BASALT   /home/emma/miniconda3/envs/BASALT</code></pre>
+          <p>Then change permissions for BASALT script folders:</p>
+          <pre><code>chmod -R 777 /home/emma/miniconda/envs/BASALT/bin/*</code></pre>
+
+          <p>Download the trained models for neural networks 'BASALT.zip' from FigShare:</p>
+          <pre><code>wget https://figshare.com/ndownloader/files/41093033
+mv 41093033 BASALT.zip
+mv BASALT.zip ~/.cache
+cd ~/.cache
+unzip BASALT.zip</code></pre>
+          <p>For users from China mainland, download the models <code>BASALT.zip</code> from Tencent iCloud (<a class="text-[#006994] underline" href="https://share.weiyun.com/r33c2gqa" target="_blank">https://share.weiyun.com/r33c2gqa</a>) and run:</p>
+          <pre><code>mv BASALT.zip ~/.cache
+cd ~/.cache
+unzip BASALT.zip</code></pre>
+
+          <h3 id="installation-singularity">4. Another method to install BASALT in mainland China: Load the BASALT .sif image via Singularity</h3>
+          <p>To obtain the <code>BASALT.sif</code> image file, use the following Weiyun link: <a class="text-[#006994] underline" href="https://share.weiyun.com/xKmoBmrF" target="_blank">https://share.weiyun.com/xKmoBmrF</a></p>
+
+          <p>Place the BASALT Singularity image (<code>BASALT.sif</code>) in the server's home directory. Run it using the singularity command, for example:</p>
+          <pre><code>singularity run BASALT.sif BASALT -a as1.fa -s S1_R1.fq,S1_R2.fq/S2_R1.fq,S2_R2.fq -t 32 -m 128</code></pre>
+
+          <p>If <code>BASALT.sif</code> is not located in the home directory, add the <code>-B</code> mount option when running it, for example:</p>
+          <pre><code>singularity run -B /media/emma BASALT.sif BASALT -h</code></pre>
+
+          <p>Requires background mounting and execution. While <code>nohup</code> may encounter unexpected issues, cluster submissions via commands like <code>sbatch</code> typically run normally. For lab servers, consider using the <code>screen</code> command. Strictly follow the screen command execution method (unless you are highly familiar with <code>screen</code>, do not modify the command execution method arbitrarily):</p>
+          <pre><code>screen -dmS session_name bash -c 'bash basalt.sh &gt; log_basalt'</code></pre>
+
+          <p>Please note that the <code>session_name</code> should be a unique identifier specific to your project to avoid unexpected issues.</p>
+
+          <p><code>BASALT.sif</code> contains numerous software tools such as <code>checkm1</code>, <code>checkm2</code>, <code>semibin</code>, <code>bowtie2</code>, and <code>bwa</code>. You can invoke them using the following method:</p>
+          <pre><code>singularity run BASALT.sif bowtie2 -h</code></pre>
+
+          <h3 id="installation-testfiles">5. Test files</h3>
+          <p>Sample demo files (see BASALT demo files) are prepared for testing whether the BASALT script can be successfully performed, and the bins can be generated. The demo files contain <code>Data.tar.gz</code>, <code>Final_bestbinset.tar.gz</code> and <code>basalt.sh</code>.</p>
+          <pre><code>Data.tar.gz -&gt; short read and long read raw sequence files and an OPERA-MS assembled contig file.
+Final_bestbinset.tar.gz -&gt; expected output of final bins.
+basalt.sh -&gt; script running this demo.</code></pre>
+          <p>A workstation with a configuration of <code>Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz</code> with 32 cores is expected to complete processing of this demo dataset within ~6 hours.</p>
+        </section>
+
+        <!-- Demo dataset section inserted per request -->
+        <section id="demo-dataset">
+          <h2>Demo dataset</h2>
+          <p>There is a demo dataset to test BASALT code at <a class="text-[#006994] underline" href="https://figshare.com/articles/dataset/BASALT_demo_files/22323424" target="_blank">https://figshare.com/articles/dataset/BASALT_demo_files/22323424</a>, where the content of the files are as follows:</p>
+
+          <br>Data.tar.gz - short read and long read raw sequence files and an OPERA-MS assembled contig file.
+
+          <br>Final_bestbinset.tar.gz - expected output of final bins.
+
+          <br>basalt.sh - script running this demo
+          
+
+          <p>Using a workstation Intel(R) Xeon(R) Gold 5218 CPU @ 2.30GHz with 32 cores, this demo dataset is expected to be finished within 6 h.</p>
+        </section>
+
+        <section id="usage">
+          <h2>Usage</h2>
+          <h3 id="usage-general">1.General usage</h3>
+
+          <p>To run BASALT, use BASALT under conda environment, or use <code>BASALT.py</code> for standalone users:</p>
+
+          <pre><code>BASALT [-h] [-a ASSEMBLIES] [-s SR_DATASETS] [-l LONG_DATASETS] [-hf HIFI_DATASET] [-c HI_C_DATASET] [-t THREADS] [-m RAM] [-e EXTRA_BINNER] [-qc QC_SOFTWARE] [--min-cpn MIN_COMPLETENESS] [--max-ctn MAX_CONTAMINATION] [--mode RUNNING_MODE] [--module FUNCTIONAL_MODULE] [--autopara AUTOBINING_PARAMETERS] [--refinepara REFINEMENT_PARAMTER]![image](https://github.com/EMBL-PKU/BASALT/assets/62051720/61fb5b05-2844-4867-9598-f91e0709fa9a)</code></pre>
+
+          <p>Required arguments</p>
+
+          <pre><code>-a	list of assemblies, e.g., -a assembly1.fa,assembly2.fa
+Files ending with .fa, .fna, and .fasta are all supported. Additionally, compressed files ending with .gz, .tar.gz, and .zip are also supported.
+
+-s	short-read datasets, e.g., -s d1_r1.fq,d1_r2.fq/d2_r1.fq,d2_r2.fq
+Please note, read files within each pair are separated with ‘,’, and read pairs are separated with ‘/’. Reads files ending with .gz, .tar.gz, and .zip are also supported.
+
+-l	long-read datasets, e.g., -l lr1.fq,lr2.fq
+
+-hf	PacBio-HiFi datasets, e.g., -hf hifi1.fq,hifi2.fq
+
+-c	Hi-C datasets, e.g., -c hc1.fq,hc2.fq
+Read files within each pair are separated with ‘,’. Reads files ending with .gz, .tar.gz, and .zip are also supported.
+
+-t	number of threads, e.g., -t 32
+
+-m	RAM, e.g., -m 128
+Suggested minimum RAM is 32G.
+</code></pre>
+
+          <p>Optional arguments</p>
+          <pre><code>--min-cpn		Minimum completeness cutoff, e.g., --min-cpn 30 (default: 35)
+
+--max-ctn		Maximum contamination cutoff, e.g., --max-ctn 25 (default: 20)
+
+--mode		Running mode. Start a new project from the beginning –-mode new or continue the previous run –-mode continue. (default: continue)
+
+--module		Running mode. Run only Autobinning + Bin Selection modules –-module autobinning, Refinement module –-module refinement, Gap filling module –-module reassembly, or running all modules –-module all. (default: all)
+
+--autopara		Autobinning parameters.
+--autopara more-sensitive Choose recommended binners with full parameters: Maxbin2 [0.3, 0.5, 0.7, 0.9], MetaBAT2 [200, 300, 400, 500], CONCOCT [2-3 flexible parameters based on result of MetaBAT2], and Semibin2 [100]
+--autopara sensitive Partial binners with partial parameters: MetaBAT2 [200, 300, 400, 500], CONCOCT [1-2 flexible parameters based on result of MetaBAT2], and Semibin2 [100]
+--autopara quick Limited binners: MetaBAT2 [200, 300, 400, 500] and Semibin2 [100]
+(default: more-sensitive)
+
+--refinepara	Refinement parameters.
+--refinepara deep will enable deep refinement at sequence retrieval step. Disable this function by setting the parameter with
+--refinepara quick. (default: deep)
+
+--hybrid_reassembly	Setting hybrid reassembly parameters. In reassembly function, BASALT uses SPAdes Hybrid function as default parameter
+--hybrid_assembly n to process hybrid reassembly in the existence of SRS and LRS. Use --hybrid_assembly y to use Unicycler for hybrid reassembly. Please note that it will take a considerable amount of time when using Unicycler for hybrid reassembly.
+
+-q		Selection of quality check software. Default: checkm. If you want to use CheckM2, by setting with -q checkm2.
+
+-e		Enable extra binners. We temporarily disabled VAMB in BASALT v1.0.1. To enable Metabinner, use -e m in addition to other binners
+
+-h 		Help documents.
+</code></pre>
+
+  <h3 id="usage-examples">2.Example Run BASALT based on SRS datasets:</h3>
+    <pre><code>BASALT\
+-a as1.fa,as2.fa,as3.fa\
+-s srs1_r1.fq,srs1_r2.fq/srs2_r1.fq,srs2_r2.fq\
+-t 60 -m 250
+</code></pre>
+
+<p>Run BASALT based on SRS + LRS datasets</p>
+    <pre><code> BASALT\
+-a as1.fa,as2.fa,as3.fa\
+-s srs1_r1.fq,srs1_r2.fq/srs2_r1.fq,srs2_r2.fq\
+-l lrs1.fq,lrs2.fq -t 60 -m 250
+</code></pre>
+
+<p>Run BASALT based on customized parameters</p>
+    <pre><code>BASALT\
+-a as1.fa,as2.fa,as3.fa\
+-s srs1_r1.fq,srs1_r2.fq/srs2_r1.fq,s2_r2.fq\
+-l lr1.fq,lr2.fq -hf hifi1.fq\
+-t 60 -m 250\
+--autopara sensitive --refinepara quick --min-cpn 40 --max-ctn 15 -qc checkm2
+</code></pre>
+
+        
+  </section>
+
+        <section id="troubleshooting">
+          <h2>Troubleshooting</h2>
+
+          <h3 id="troubleshooting-samtools">1.Error from SAMtools when installing BASALT:</h3>
+          <pre><code>samtools: error while loading shared libraries: libcrypto.so1.0.0: cannot open shared object file: No such file or directory</code></pre>
+
+          <p>Troubleshooting: Check the file libcrypto.so.1.0.0:</p>
+          <pre><code>ls &lt;PATH_TO_CONDA&gt;/envs/BASALT/lib/libcry*</code></pre>
+
+          <p>If libcrypto.so.1.1 was found instead of libcrypto.so.1.0.0, create a soft link of libcrypto.so.1.1 to libcrypto.so.1.0.0:</p>
+          <pre><code>cd &lt;PATH_TO_CONDA&gt;/envs/BASALT/lib
+ln -s libcrypto.so.1.1 libcrypto.so.1.0.0</code></pre>
+
+          <p>Then check if SAMtools is available:</p>
+          <pre><code>samtools -help</code></pre>
+
+          <h3 id="troubleshooting-indexerror">2.Error encountered when running BASALT:</h3>
+          <pre><code>Traceback (most recent call last):
+File "/users/.conda/envs/BASALT/bin/BASALT", line 57, in
+    datasets[str(n)].append(pr[1].strip())
+IndexError: list index out of range</code></pre>
+          <p>This is because BASALT does not support reading files with absolute path. To address this issue, simply move/copy corresponding files to the working directory or establish soft links under the working directory.</p>
+
+          <h3 id="troubleshooting-lrs-mode">3.Error encountered when running BASALT:</h3>
+          <pre><code>Traceback (most recent call last):
+File "/users/.conda/envs/BASALT/bin/BASALT", line 53, in
+    datasets_list=sr_datasets.split('/')</code></pre>
+          <p>This is because BASALT does not support LRS only mode except PacBio-HiFi reads in v1.0.1. Please use SRS + LRS instead of LRS only. LRS only mode for Nanopore/PacBio long reads will be available in v1.0.2.</p>
+
+          <h3 id="troubleshooting-checkm2">4.Error encountered when running BASALT:</h3>
+          <pre><code>INFO: Running CheckM2 version 1.0.1
+[03/13/2024 12:56:34 PM] INFO: Running quality prediction workflow with 30 threads.
+[03/13/2024 12:56:34 PM] ERROR: DIAMOND database not found. Please download database using &lt;checkm2 database --download&gt;</code></pre>
+          <p>This is because CheckM2 database is not installed. Users can simply download CheckM2 database from their official website (<a class="text-[#006994] underline decoration-2 decoration-[#006994]" href="https://github.com/chklovski/CheckM2" target="_blank">https://github.com/chklovski/CheckM2</a>) to address this issue.</p>
+
+          <h3 id="troubleshooting-notfound">5.Error encountered when running BASALT:</h3>
+          <pre><code>BASALT: command not found!</code></pre>
+          <p>This issue occurred because BASALT scripts cannot be found or administrated. Please firstly check if BASALT has been successfully installed, by checking script files under the bin folder of BASALT environment, e.g.:</p>
+          <pre><code>&lt;PATH_TO_CONDA&gt;/envs/BASALT/bin/</code></pre>
+          <p>If no script file was found, please download BASALT script again and copy to the bin folder of BASALT environment, by using the following commands:</p>
+          <pre><code>unzip BASALT_script.zip
+chmod -R 777 BASALT_script
+mv BASALT_script/* &lt;PATH_TO_CONDA&gt;/envs/BASALT/bin/</code></pre>
+          <p>If BASALT scripts are found in the bin folder of BASALT environment, try to change permissions by using the following commands:</p>
+          <pre><code>chmod -R 777 &lt;PATH_TO_CONDA&gt;/envs/BASALT/bin/*</code></pre>
+
+          <h3 id="troubleshooting-qualityreport">6.Error encountered when running BASALT:</h3>
+          <pre><code>Traceback (most recent call last):
+File "/user/miniconda3/envs/BASALT/bin/BASALT", line 137, in &lt;module&gt;
+ BASALT_main_d(assembly_list, datasets, num_threads, lr_list, hifi_list, hic_list, eb_list, ram, continue_mode, functional_module, autobining_parameters, refinement_paramter, max_ctn, min_cpn, pwd, QC_software)
+File "/user/miniconda3/envs/BASALT/bin/BASALT_main_d.py", line 494, in BASALT_main_d
+ Contig_recruiter_main(best_binset_from_multi_assemblies, outlier_remover_folder, num_threads, continue_mode, min_cpn, max_ctn, assembly_mo_list, connections_list, lr_connection_list, coverage_matrix_list, refinement_paramter, pwd)
+File "/user/miniconda3/envs/BASALT/bin/S6_retrieve_contigs_from_PE_contigs_10302023.py", line 1819, in Contig_recruiter_main
+ parse_bin_in_bestbinset(assemblies_list, binset+'_filtrated', outlier_remover_folder, PE_connections_list, lr_connection_list, num_threads, last_step, coverage_matrix_list, refinement_mode)
+File "/user/miniconda3/envs/BASALT/bin/S6_retrieve_contigs_from_PE_contigs_10302023.py", line 1695, in parse_bin_in_bestbinset
+ bin_comparison(str(binset), bins_checkm, str(binset)+'_retrieved', refinement_mode, num_threads)
+File "/user/miniconda3/envs/BASALT/bin/S6_retrieve_contigs_from_PE_contigs_10302023.py", line 731, in bin_comparison
+ for line in open('quality_report.tsv','r'):
+FileNotFoundError: [Errno 2] No such file or directory: 'quality_report.tsv'</code></pre>
+          <p>This is possibly due to the insufficient number of bins generated due to the low coverage of datasets at the current step, which CheckM2 cannot generate quality file.</p>
+
+        </section>
+
+        <section id="qa">
+          <h2>Q&amp;A</h2>
+
+          <h3>1. Why Choose BASALT</h3>
+          <p>
+            BASALT delivers powerful microbiome analysis capabilities (especially in metagenomics), offering high efficiency and exceptional data compatibility. It uncovers more microbial genomes with MAG redundancy removal rates reaching 99% at the species level and contamination removal rates as high as 60%–95%. Additionally, it can further refine data generated by other software.
+          </p>
+
+          <h3>2. Is BASALT available for free?</h3>
+          <p>
+            BASALT is completely free and open-source software. You can freely access the source code and documentation from the official GitHub repository (<a class="text-[#006994] underline" href="https://github.com/EMBL-PKU/BASALT" target="_blank">https://github.com/EMBL-PKU/BASALT</a>). Developed and maintained by a research team at Peking University, it embraces the open-source spirit and welcomes users to utilize, provide feedback, and collaborate on improvements.
+          </p>
+
+          <h3>3. How to get BASALT?</h3>
+          <p>
+            BASALT supports Linux x64 environments. Users in China are recommended to install via manual configuration with Conda. Detailed operational guides are provided in the official Chinese documentation.
+          </p>
+
+          <h3>4. What does BASALT's community support offer?</h3>
+          <p>
+            Our community provides comprehensive official Chinese documentation covering everything from installation and parameter configuration to troubleshooting. BASALT remains under active development and optimization. The community will synchronously update resources for the latest versions and welcomes all users to engage in collaborative learning and discussion.
+          </p>
+ 
+          <h3>5. Can the same contigs be used multiple times in BASALT?</h3>
+          <p>
+            BASALT can handle assemblies where identical or highly similar contigs appear across multiple inputs. Its de-replication and refinement modules will detect redundancy and remove or collapse duplicates during bin refinement. That said, avoid unintentionally feeding identical assemblies multiple times unless you are explicitly comparing results from different assembly strategies.
+          </p>
+
+          <h3>6. Why does BASALT sometimes take longer to run?</h3>
+          <p>
+            Runtime depends on dataset size (number of contigs, read depth), assembly complexity, and which optional modules you enable (for example, deep-learning refinement, iterative polishing, or reassembly steps). To reduce runtime for testing, use smaller test datasets, reduce threads or disable non-essential modules in the configuration.
+          </p>
+
+          <h3>7. How do I refine bins that were produced by other tools?</h3>
+          <p>
+            You can provide existing bins to BASALT's refinement workflow (see the documentation for the input-bins or equivalent option). BASALT will evaluate and refine supplied bins using its de-replication, polishing, and quality-improvement steps. Make sure input bins are in standard FASTA format and, when possible, supply the matching assembly and coverage inputs to get the best results.
+          </p>
+
+          <h3>8. Is there a parameter to control output formats or naming?</h3>
+          <p>
+            Yes — BASALT's configuration exposes options for output directory, file prefixes, and which intermediate files to keep. Check the config or CLI options (for example: output_dir, prefix, keep_intermediate) to customize output names and formats. By default, BASALT writes refined bins in FASTA plus summary reports.
+          </p>
+        </section>
+        
+        <section id="cite">
+          <h2>Cite our article</h2>
+          <p>
+            Z Qiu, L Yuan, C Lian, B Lin, J Chen, R Mu, X Qiao, L Zhang, Z Xu, L Fan, Y Zhang, S Wang, J Li, H Cao, B Li, B Chen, C Song, Y Liu, L Shi, Y Tian, J Ni, T Zhang, J Zhou, W Zhuang, K Yu. <strong>BASALT refines binning from metagenomic data and increases resolution of genome-resolved metagenomic analysis.</strong> Nat. Commun. 2024, 15, 2179. <a class="text-[#006994] underline decoration-2 decoration-[#006994]" href="https://doi.org/10.1038/s41467-024-46539-7" target="_blank">https://doi.org/10.1038/s41467-024-46539-7</a>
+          </p>
+        </section>
+
+         <section id="references">
+          <h2>References</h2>
+          <ul class="list-disc ml-6 space-y-2">
+            <li>Uritskiy, G.V., DiRuggiero, J. &amp; Taylor, J. MetaWRAP—a flexible pipeline for genome-resolved metagenomic data analysis. Microbiome 6, 1-13 (2018).</li>
+            <li>Sieber, C.M. et al. Recovery of genomes from metagenomes via a dereplication, aggregation and scoring strategy. Nature Microbiology 3, 836-843 (2018).</li>
+            <li>Olm, M.R., Brown, C.T., Brooks, B. &amp; Banfield, J.F. dRep: a tool for fast and accurate genomic comparisons that enables improved genome recovery from metagenomes through de-replication. The ISME Journal 11, 2864-2868 (2017).</li>
+            <li>Qiu, Z. et al. BASALT refines binning from metagenomic data and increases resolution of genome-resolved metagenomic analysis. Nature Communications 15, 2179 (2024).</li>
+          </ul>
+        </section>
+
+
+  <CallToAction
+    title="BASALT"
+    subtitle="To get a powerful and efficiency metagenomic sequence analysis software.Don't waste more time! :）"
+    actions={[
+      {
+        variant: 'primary',
+        text: 'Download',
+        href: 'https://github.com/EMBL-PKU/BASALT/tree/master',
+        icon: 'tabler:download',
+      },
+    ]}
+  />
+  <script type="module">
+    // Scrollspy: highlight TOC links based on section in view
+    const links = Array.from(document.querySelectorAll('.toc-link, .toc-sub-link'));
+    const idToLink = new Map(links.map(l => [l.getAttribute('href').slice(1), l]));
+    const ids = Array.from(idToLink.keys());
+    const observed = ids.map(id => document.getElementById(id)).filter(Boolean);
+
+    if (observed.length) {
+      const observer = new IntersectionObserver((entries) => {
+        // find entry with largest intersectionRatio that's intersecting
+        const visible = entries.filter(e => e.isIntersecting).sort((a,b) => b.intersectionRatio - a.intersectionRatio);
+        if (visible.length) {
+          const id = visible[0].target.id;
+          // clear all
+          links.forEach(l => l.classList.remove('font-bold', 'underline', 'text-blue-100'));
+          const active = idToLink.get(id);
+          if (active) active.classList.add('font-bold', 'underline', 'text-blue-100');
+        }
+      }, { root: null, rootMargin: '-30% 0px -60% 0px', threshold: [0, 0.25, 0.5, 0.75] });
+
+      observed.forEach(el => observer.observe(el));
+    }
+
+    // Helper: find the first heading inside a section (h1-h5). If none found, use the section itself.
+    function findHeadingInSection(section) {
+      if (!section) return null;
+      const heading = section.querySelector('h1, h2, h3, h4, h5');
+      return heading || section;
+    }
+
+  // make clicking a link set active immediately and scroll with offset so the heading is visible
+    links.forEach(l => l.addEventListener('click', (e) => {
+      e.preventDefault();
+      links.forEach(x => x.classList.remove('font-bold', 'underline', 'text-blue-100'));
+      l.classList.add('font-bold', 'underline', 'text-blue-100');
+
+      const targetId = l.getAttribute('href').slice(1);
+      const section = document.getElementById(targetId);
+      const target = findHeadingInSection(section);
+      if (target) {
+        // compute header/sticky offset; fall back to 24px if not found
+        const header = document.querySelector('header, .site-header, .top-0');
+        const headerHeight = header ? header.getBoundingClientRect().height : 24;
+        // Scroll to the heading's top so the heading itself is visible (accounts for heading margin)
+        const top = target.getBoundingClientRect().top + window.scrollY - headerHeight - 12; // extra gap
+        window.scrollTo({ top, behavior: 'smooth' });
+        // temporary highlight on right-side section (highlight the section container if present)
+        if (section) {
+          section.classList.add('section-highlight');
+          setTimeout(() => section.classList.remove('section-highlight'), 1800);
+        } else {
+          target.classList.add('section-highlight');
+          setTimeout(() => target.classList.remove('section-highlight'), 1800);
+        }
+      }
+    }));
+
+    // --- Collapsible TOC sublists (toggle hide/show and rotate chevron) ---
+    (function tocCollapsibles(){
+      try {
+        const toggles = Array.from(document.querySelectorAll('.toc-toggle'));
+        toggles.forEach(btn => {
+          const targetId = btn.getAttribute('data-target');
+          const list = document.getElementById(targetId);
+          // ensure accessible state reflects current visibility
+          if (!list) return;
+          const isHidden = list.classList.contains('hidden');
+          btn.setAttribute('aria-expanded', (!isHidden).toString());
+
+          btn.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            const expanded = btn.getAttribute('aria-expanded') === 'true';
+            btn.setAttribute('aria-expanded', String(!expanded));
+            list.classList.toggle('hidden');
+            // rotate svg chevron (Tailwind rotate-180)
+            const svg = btn.querySelector('svg');
+            if (svg) svg.classList.toggle('rotate-180');
+          });
+        });
+      } catch (err) {
+        console.warn('tocCollapsibles failed', err);
+      }
+    })();
+
+    // --- Copy button implementation: add a fixed copy button to the top-right of code blocks ---
+    (function addCopyButtons(){
+      try{
+        const copySVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 1H4c-1.1 0-2 .9-2 2v12h2V3h12V1z" fill="#fff" opacity="0.9"/><path d="M20 5H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h12v14z" fill="#fff"/></svg>';
+        const checkSVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 16.2l-3.5-3.5L4 14.2 9 19.2 20 8.2 18.6 6.8z" fill="#fff"/></svg>';
+
+        const blocks = Array.from(document.querySelectorAll('pre > code'));
+        blocks.forEach(code => {
+          const pre = code.parentElement;
+          if (!pre) return;
+
+          // If already enhanced, skip
+          if (pre.parentElement && pre.parentElement.classList.contains('code-wrapper') && pre.parentElement.querySelector('.copy-code-btn')) return;
+
+          // Wrap the <pre> in a relative wrapper so button stays fixed while pre scrolls
+          const wrapper = document.createElement('div');
+          wrapper.className = 'code-wrapper relative';
+          pre.parentNode.insertBefore(wrapper, pre);
+          wrapper.appendChild(pre);
+
+          // Create button
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'copy-code-btn';
+          btn.setAttribute('aria-label','复制代码');
+          btn.title = '复制代码';
+          btn.innerHTML = copySVG;
+          btn.classList.add(
+            'absolute','top-2','right-2',
+            'bg-[#006994]','text-white','border-0',
+            'w-8','h-8','flex','items-center','justify-center',
+            'p-1','text-sm','rounded-md','cursor-pointer','z-50','backdrop-blur-sm'
+          );
+
+          // Copy handler with Clipboard API and execCommand fallback
+          btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const text = (code.textContent || code.innerText || '').trim();
+            if (!text) return;
+            try {
+              await navigator.clipboard.writeText(text);
+              const original = btn.innerHTML;
+              btn.innerHTML = checkSVG;
+              setTimeout(()=> btn.innerHTML = original, 1400);
+            } catch {
+              // fallback to select + execCommand
+              try {
+                const range = document.createRange();
+                range.selectNodeContents(code);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                document.execCommand('copy');
+                sel.removeAllRanges();
+                const original = btn.innerHTML;
+                btn.innerHTML = checkSVG;
+                setTimeout(()=> btn.innerHTML = original, 1400);
+              } catch {
+                // indicate failure briefly
+                const old = btn.textContent;
+                btn.textContent = '失败';
+                setTimeout(()=> btn.textContent = old || '', 1200);
+              }
+            }
+          });
+
+          wrapper.appendChild(btn);
+        });
+      } catch(e) {
+        // no-op
+        console.warn('addCopyButtons failed', e);
+      }
+    })();
+
+  </script>
+</Layout>
