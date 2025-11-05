@@ -59,6 +59,14 @@ export async function GET() {
         const local = await readFallback();
         return new Response(JSON.stringify({ data: local }), { status: 200 });
       }
+      // If supabase returned an empty array but we have a local fallback with items,
+      // prefer returning the local sample data so the UI isn't empty during early setup.
+      if (Array.isArray(res.data) && res.data.length === 0) {
+        const local = await readFallback();
+        if (Array.isArray(local) && local.length > 0) {
+          return new Response(JSON.stringify({ data: local }), { status: 200 });
+        }
+      }
       return new Response(JSON.stringify({ data: res.data }), { status: 200 });
     }
 

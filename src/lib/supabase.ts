@@ -16,9 +16,13 @@ if (SUPABASE_URL && SUPABASE_ANON_KEY) {
   const noopGetUser = async () => ({ data: { user: null } });
   const authShim = {
     getUser: noopGetUser,
-    signOut: async () => ({}),
-    signUp: noop,
-    signInWithPassword: noop,
+    // getSession/setSession used by client code to access tokens
+    getSession: async () => ({ data: { session: null } }),
+    setSession: async (_obj) => ({ data: { session: null } }),
+  signOut: async () => ({}),
+  signUp: noop,
+  signInWithPassword: noop,
+  updateUser: async (_obj) => ({ data: null, error: { message: 'Supabase not configured' } }),
     onAuthStateChange: (_cb) => ({ data: null }),
   };
 

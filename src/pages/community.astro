@@ -103,14 +103,36 @@ const metadata = {
 </script>
 
 <script type="module">
-  import { supabase } from '~/lib/supabase';
+  // dynamically import the Supabase client for the browser at runtime using an absolute path
+  let supabase = null;
+  try {
+    const mod = await import('/src/lib/supabase.ts');
+    supabase = mod?.supabase || mod?.default || null;
+  } catch (e) {
+    console.debug('[community] could not import supabase client', e);
+  }
 
   const $ = (id) => document.getElementById(id);
 
-  console.log('[community] script loaded');
+  console.log('[community] script loaded', { hasSupabase: !!supabase });
 
   // cached current user to avoid round-trip auth calls on every click
   let CURRENT_USER = null;
+
+  // helper to open the header auth panel reliably (avoid relying on element click which may not have listeners attached yet)
+  function openAuthPanel() {
+    try {
+      const panel = document.getElementById('auth-panel');
+      if (panel) {
+        panel.classList.remove('hidden');
+        const prov = document.getElementById('header-github-btn');
+        try { prov?.focus(); } catch { /* noop */ }
+        return true;
+      }
+    } catch { /* noop */ }
+    try { const btn = document.getElementById('open-login-panel'); if (btn) { btn.click(); return true; } } catch { /* noop */ }
+    return false;
+  }
 
   // escape helper to avoid XSS when inserting HTML
   function escapeHtml(s) {
@@ -164,12 +186,12 @@ const metadata = {
       const to = setTimeout(() => {
         // animate out
         el.style.opacity = '0'; el.style.transform = 'translateY(-6px)';
-        setTimeout(() => { try { container.removeChild(el); } catch (e) {} }, 240);
+  setTimeout(() => { try { container.removeChild(el); } catch { void 0; } }, 240);
       }, timeout);
-      el.addEventListener('click', () => { clearTimeout(to); el.style.opacity = '0'; setTimeout(() => { try { container.removeChild(el); } catch (e) {} }, 200); });
+  el.addEventListener('click', () => { clearTimeout(to); el.style.opacity = '0'; setTimeout(() => { try { container.removeChild(el); } catch { void 0; } }, 200); });
       return el;
-    } catch (e) {
-      try { alert(message); } catch (er) { console.log(message); }
+  } catch {
+      try { alert(message); } catch { console.log(message); }
     }
   }
 
@@ -194,7 +216,7 @@ const metadata = {
         const display = user.user_metadata?.name || user.email?.split('@')[0] || '';
   $('auth-status-header').textContent = `Hi, ${display}`;
   $('auth-status-header').setAttribute('title', user.email || '');
-  try { $('auth-status-header').style.whiteSpace = 'normal'; } catch (e) { /* noop */ }
+  try { $('auth-status-header').style.whiteSpace = 'normal'; } catch (e) { void e; }
         // toggle header buttons if exist
         $('open-register-panel')?.classList.add('hidden');
         $('open-login-panel')?.classList.add('hidden');
@@ -213,7 +235,7 @@ const metadata = {
       }
     }
     // update cached user for fast access in event handlers
-    try { CURRENT_USER = user; } catch (e) { CURRENT_USER = user; }
+    try { CURRENT_USER = user; } catch { CURRENT_USER = user; }
   }
 
   async function initAuth() {
@@ -227,6 +249,8 @@ const metadata = {
       await renderUser(u);
     });
 
+    // use the top-level openAuthPanel implementation instead of redefining it here
+
     // registration-related modals and resend logic removed
   }
 
@@ -234,7 +258,7 @@ const metadata = {
   function getPendingPosts() {
     try { return JSON.parse(localStorage.getItem('bb_pending_posts') || '[]'); } catch { return []; }
   }
-  function savePendingPosts(arr) { try { localStorage.setItem('bb_pending_posts', JSON.stringify(arr)); } catch (e) { /* noop */ } }
+  function savePendingPosts(arr) { try { localStorage.setItem('bb_pending_posts', JSON.stringify(arr)); } catch (e) { void e; } }
   function addPendingPost(post) {
     const arr = getPendingPosts();
     arr.unshift(post);
@@ -250,7 +274,7 @@ const metadata = {
         return true;
       });
       savePendingPosts(left);
-    } catch (e) { /* noop */ }
+  } catch (e) { void e; }
   }
 
   // registration handler removed
@@ -260,7 +284,7 @@ const metadata = {
     const email = $('h-login-email')?.value?.trim();
     const pwd = $('h-login-password')?.value || '';
   if (!email || !pwd) return showToast('Please enter email and password', 'error');
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: pwd });
+  const { error } = await supabase.auth.signInWithPassword({ email, password: pwd });
   if (error) return showToast(error.message || 'Login failed', 'error');
   showToast('Login successful', 'success');
     $('header-loginForm')?.classList.add('hidden');
@@ -273,15 +297,13 @@ const metadata = {
       if (!t) return;
       // open auth panel
       // open-register-panel removed (registration disabled)
-      if (t.id === 'open-login-panel') {
+      if (t.id === 'open-login-panel' || (t.closest && t.closest('#open-login-panel'))) {
         ev.preventDefault();
-        $('auth-panel')?.classList.remove('hidden');
-        $('header-loginForm')?.classList.remove('hidden');
-        $('header-registerForm')?.classList.add('hidden');
-        $('h-login-email')?.focus();
+        // open auth panel reliably
+        openAuthPanel();
         return;
       }
-      // New topic button (delegated) - ensures clicks work even if direct listener wasn't bound
+  // New topic button (delegated) - ensures clicks work even if direct listener wasn't bound
       if (t.id === 'open-new-topic' || t.closest && t.closest('#open-new-topic')) {
         ev.preventDefault();
         // prefer cached CURRENT_USER to avoid an extra auth call
@@ -290,21 +312,25 @@ const metadata = {
           try {
             const { data } = await supabase.auth.getUser();
             CURRENT_USER = data?.user ?? null;
-          } catch (e) { /* noop */ }
+          } catch (e) { void e; }
         }
-  if (!CURRENT_USER) { showToast('Please log in', 'error'); $('open-login-panel')?.click(); return; }
+  if (!CURRENT_USER) { showToast('Please log in', 'error'); openAuthPanel(); return; }
         $('new-topic-modal')?.classList.remove('hidden');
         $('new-topic-title')?.focus();
         return;
       }
-    } catch (err) {
+      // Cancel new topic (delegated) - catches clicks on the cancel button even if direct listener missing
+      if (t.id === 'cancel-new-topic' || (t.closest && t.closest('#cancel-new-topic'))) {
+  try { ev.preventDefault(); document.getElementById('new-topic-modal')?.classList.add('hidden'); } catch (e) { void e; }
+        return;
+      }
+  } catch (err) {
       console.error('[community] click delegation error', err);
     }
   });
 
   // Comments: server-backed (via /api/comments) with client-side pager state
-  let currentCommentsPostId = null;
-  let currentCommentsPage = 1;
+  // comments pager state (kept locally in function scope when needed)
   const COMMENTS_PAGE_LIMIT = 5;
 
   async function fetchComments(postId, page = 1, limit = COMMENTS_PAGE_LIMIT) {
@@ -313,7 +339,7 @@ const metadata = {
       if (!resp.ok) return { data: [], total: 0, page, limit };
       const json = await resp.json();
       return { data: json.data || [], total: json.total || 0, page: json.page || page, limit: json.limit || limit };
-    } catch (e) {
+  } catch (e) {
       console.debug('fetchComments failed', e);
       return { data: [], total: 0, page, limit };
     }
@@ -342,10 +368,9 @@ const metadata = {
   }
 
   async function renderCommentsForPost(postId, page = 1) {
-    currentCommentsPostId = postId;
-    currentCommentsPage = page;
+  // (pager state is handled locally; no top-level variables required)
     const list = document.getElementById('pd-comments-list');
-    const countEl = document.getElementById('pd-comments');
+  // const countEl = document.getElementById('pd-comments'); // not used here (pd-comments-count updated below)
   const pagerLeft = document.getElementById('pd-comments-left');
   const pagerRight = document.getElementById('pd-comments-right');
   const pageDisplay = document.getElementById('pd-comments-page-display');
@@ -353,7 +378,7 @@ const metadata = {
     list.innerHTML = '<li class="text-sm text-muted">Loading...</li>';
     const res = await fetchComments(postId, page, COMMENTS_PAGE_LIMIT);
     list.innerHTML = '';
-    // read navigation username (if present) to display instead of generic '匿名' when comments lack author_display
+  // read navigation username (if present) to display instead of generic 'Anonymous' when comments lack author_display
     const navStatusEl = document.getElementById('auth-status-header');
     let navName = navStatusEl ? (navStatusEl.textContent || '').trim() : null;
     // header often uses "Hi, NAME" — strip polite prefix if present
@@ -362,6 +387,12 @@ const metadata = {
     }
     // Build a tree view: top-level comments first, then replies indented
     const comments = Array.isArray(res.data) ? res.data.slice() : [];
+    // build a quick id map for the current page slice so we can detect orphaned replies
+    const idMap = {};
+    for (const c of comments) {
+      if (c && c.id != null) idMap[String(c.id)] = true;
+    }
+
     // replies map: parent_id -> [comments]
     const repliesMap = {};
     for (const c of comments) {
@@ -372,7 +403,10 @@ const metadata = {
       }
     }
 
-    const topLevel = comments.filter(c => !c.parent_id);
+    // Top-level comments for this page are those without a parent OR whose parent is not present
+    // in the current page slice (render orphaned replies as standalone items so the visible
+    // count matches the server-reported total for this page slice).
+    const topLevel = comments.filter(c => !c.parent_id || !idMap[String(c.parent_id)]);
 
     function createCommentLi(c, indent = 0) {
       const li = document.createElement('li');
@@ -381,8 +415,8 @@ const metadata = {
 
       const rawAuthor = (c.author_display || '') + '';
       const low = rawAuthor.trim().toLowerCase();
-      const isPlaceholder = !rawAuthor.trim() || low === '匿名' || low === 'anonymous' || low === 'anon';
-      const author = escapeHtml(isPlaceholder ? (navName || '匿名') : rawAuthor);
+  const isPlaceholder = !rawAuthor.trim() || low === 'anonymous' || low === 'anon';
+  const author = escapeHtml(isPlaceholder ? (navName || 'Anonymous') : rawAuthor);
       const content = escapeHtml(c.content || '');
       const time = c.created_at ? new Date(c.created_at).toLocaleString() : '';
 
@@ -407,14 +441,32 @@ const metadata = {
     }
 
     // toggle an inline reply form under a comment li
-    function toggleReplyForm(containerLi, parentId) {
+  async function toggleReplyForm(containerLi, parentId) {
       try {
         // remove existing form if present
         const existing = containerLi.querySelector('.reply-form');
         if (existing) { existing.remove(); return; }
 
+        // Check if user is logged in. If not, show a small CTA to login instead of the reply textarea.
+        let isUser = false;
+        try {
+          const { data: _u } = await supabase.auth.getUser();
+          isUser = !!(_u?.user);
+        } catch { /* noop */ }
+
         const formWrap = document.createElement('div');
         formWrap.className = 'reply-form mt-2';
+
+        if (!isUser) {
+          // unauthenticated -> show login CTA
+          formWrap.innerHTML = `<div class="p-2 rounded border text-sm text-muted">Please log in to comment <button class="reply-login ml-2 px-2 py-1 rounded bg-[#006994] text-white text-sm">Login</button></div>`;
+          const loginBtn = formWrap.querySelector('.reply-login');
+          if (loginBtn) loginBtn.addEventListener('click', (e) => { e.preventDefault(); openAuthPanel(); });
+          containerLi.appendChild(formWrap);
+          return;
+        }
+
+        // authenticated -> render reply form
         formWrap.innerHTML = `<textarea class="reply-input w-full rounded border px-2 py-1 text-sm" rows="3" placeholder="Write a reply..."></textarea><div class="flex justify-end mt-1"><button class="reply-cancel px-2 py-1 mr-2 border rounded text-sm">Cancel</button><button class="reply-submit px-3 py-1 rounded bg-[#006994] text-white text-sm">Reply</button></div>`;
         const cancel = formWrap.querySelector('.reply-cancel');
         const submit = formWrap.querySelector('.reply-submit');
@@ -424,30 +476,34 @@ const metadata = {
           try {
             e.preventDefault();
             const text = (textarea && textarea.value) ? textarea.value.trim() : '';
-            if (!text) return showToast('回复内容不能为空', 'error');
-            const { data } = await supabase.auth.getUser();
-            const user = data?.user ?? null;
-            if (!user) { showToast('Please log in', 'error'); $('open-login-panel')?.click(); return; }
+            if (!text) return showToast('Reply cannot be empty', 'error');
             // post reply (include parentId)
             const res = await postCommentToServer(postId, text, parentId);
-            if (res && res.error) { showToast('回复失败：' + (res.error || ''), 'error'); return; }
+            if (res && res.error) { showToast('Reply failed: ' + (res.error || ''), 'error'); return; }
             // refresh comments to show reply
             await renderCommentsForPost(postId, 1);
-          } catch (err) { console.error('reply submit error', err); showToast('回复失败', 'error'); }
+          } catch (err) { console.error('reply submit error', err); showToast('Reply failed', 'error'); }
         });
 
         containerLi.appendChild(formWrap);
         textarea?.focus();
-      } catch (err) { /* noop */ }
+  } catch (err) { void err; }
     }
 
-    // render
-    topLevel.sort((a,b)=> new Date(b.created_at) - new Date(a.created_at)).forEach(c => createCommentLi(c, 0));
-  if (countEl) {
-    // countEl used to contain the whole text; now we update the count span
-    const cc = document.getElementById('pd-comments-count');
-    if (cc) cc.textContent = String(res.total || 0);
-  }
+      // render
+      topLevel.sort((a,b)=> new Date(b.created_at) - new Date(a.created_at)).forEach(c => createCommentLi(c, 0));
+
+      // Update displayed comment count: show "visible/total" so users understand paging
+      try {
+        const cc = document.getElementById('pd-comments-count');
+        if (cc) {
+          // number of rendered list items
+          const rendered = Array.from(list.children).length;
+          const total = Number(res.total || rendered || 0);
+          if (rendered === total) cc.textContent = String(total);
+          else cc.textContent = `${rendered}/${total}`;
+        }
+      } catch { /* noop */ }
   // Also update the comment count visible in the thread list for this post so both views match
   try {
     const threadLi = document.querySelector(`.thread-item[data-id="${postId}"]`);
@@ -459,7 +515,7 @@ const metadata = {
       }
       threadLi.setAttribute('data-comments', String(res.total || 0));
     }
-  } catch (e) { /* noop */ }
+  } catch (e) { void e; }
     // pager enable/disable
     const lastPage = Math.max(1, Math.ceil((res.total || 0) / (res.limit || COMMENTS_PAGE_LIMIT)));
     if (pageDisplay) pageDisplay.textContent = `${res.page || 1}/${lastPage}`;
@@ -503,7 +559,7 @@ const metadata = {
           serverData = merged.concat(serverData);
           // attempt to clear any pending that are now on server
           for (const s of json?.data || []) removePendingMatching(s);
-        } catch (err) { /* noop */ }
+  } catch (err) { void err; }
         return serverData;
       }
       console.warn('[community] /api/posts returned', resp.status);
@@ -520,7 +576,7 @@ const metadata = {
           .limit(100);
       if (error) {
         console.error('loadPosts error', error);
-        try { showToast('无法加载帖子：' + (error.message || JSON.stringify(error)), 'error', 8000); } catch (e) { /* noop */ }
+  try { showToast('无法加载帖子：' + (error.message || JSON.stringify(error)), 'error', 8000); } catch (e) { void e; }
         return [];
       }
       return data || [];
@@ -545,7 +601,7 @@ const metadata = {
       headerDisplay = (navEl.textContent || '').toString().trim();
       if (headerDisplay.toLowerCase().startsWith('hi,')) headerDisplay = headerDisplay.substring(3).trim();
     }
-  } catch (e) { /* noop */ }
+  } catch (e) { void e; }
   const authorFallback = p.author_display || headerDisplay || (p.author_email ? (String(p.author_email).split('@')[0]) : '') || '';
   li.setAttribute('data-author', authorFallback);
   // store full content for detail view
@@ -622,7 +678,7 @@ const metadata = {
               return showToast('Failed to delete: ' + (j?.error || resp.statusText), 'error');
             }
             // remove element from DOM
-            try { li.remove(); } catch (_) { /* noop */ }
+            try { li.remove(); } catch (_) { void _; }
             showToast('Post deleted', 'success');
           } catch (e) {
             console.error('delete post error', e);
@@ -630,7 +686,7 @@ const metadata = {
           }
         };
       }
-    } catch (e) { /* noop */ }
+  } catch (e) { void e; }
   })();
 
     return li;
@@ -698,24 +754,30 @@ const metadata = {
     </div>
   </div>`;
 
-  // append modal to document body once DOM is ready
-  document.addEventListener('DOMContentLoaded', () => {
+  // append modal to document body once DOM is ready (robust: append immediately if DOM already ready)
+  function ensureDetailModal() {
     try {
       if (!document.getElementById('post-detail-modal')) {
         const frag = document.createElement('div');
         frag.innerHTML = detailModalHtml;
         document.body.appendChild(frag.firstElementChild);
       }
-    } catch (e) { /* noop */ }
-  });
+  } catch (e) { void e; }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureDetailModal);
+  } else {
+    ensureDetailModal();
+  }
 
   function showPostDetailByElement(li) {
     const id = li.getAttribute('data-id');
     const title = li.querySelector('h4')?.textContent || '';
     let author = (li.getAttribute('data-author') || '').trim();
-    // try visible element fallback
+    // try visible element fallback: prefer the author span in the list (p span.font-semibold),
+    // then any .font-semibold, then fall back to .font-medium (comment count markers)
     if (!author) {
-      const vis = li.querySelector('.font-medium');
+      const vis = li.querySelector('p span.font-semibold') || li.querySelector('.font-semibold') || li.querySelector('.font-medium');
       author = vis ? (vis.textContent || '').trim() : '';
     }
     // treat common placeholders as missing so we can fallback to navName
@@ -726,7 +788,7 @@ const metadata = {
       if (['匿名', 'anonymous', 'anon'].includes(low)) return true;
       try {
         if (/^\d+的\d+$/.test(raw)) return true; // matches patterns like "1的1"
-      } catch (e) { /* noop */ }
+  } catch (e) { void e; }
       return false;
     })();
 
@@ -766,7 +828,7 @@ const metadata = {
           icon.classList.remove('text-red-500');
         }
       }
-    } catch (e) { /* noop */ }
+  } catch { /* noop */ }
   }
   // comments placeholder: update count and render stored comments
   const cmCount = document.getElementById('pd-comments-count'); if (cmCount) cmCount.textContent = (li.querySelector('.font-medium') ? li.querySelector('.font-medium').textContent : '0');
@@ -786,7 +848,7 @@ const metadata = {
   if (!text) return showToast('Comment cannot be empty', 'error');
         const { data } = await supabase.auth.getUser();
         const user = data?.user ?? null;
-            if (!user) { showToast('Please log in', 'error'); $('open-login-panel')?.click(); return; }
+            if (!user) { showToast('Please log in', 'error'); openAuthPanel(); return; }
 
         // post to server
         const res = await postCommentToServer(id, text);
@@ -811,10 +873,31 @@ const metadata = {
               last.textContent = String(total);
             }
           }
-        } catch (e) { /* noop */ }
+  } catch (e) { void e; }
       };
     }
   }
+
+  // Ensure comment input reflects login state (disable and show login CTA when not logged in)
+  try {
+    const { data: _u } = await supabase.auth.getUser();
+    const isUser = !!(_u?.user);
+    const pdText = document.getElementById('pd-comment-input');
+    const pdSubmit = document.getElementById('pd-comment-submit');
+    if (pdText && pdSubmit) {
+      if (!isUser) {
+        pdText.setAttribute('disabled', 'true');
+        pdText.placeholder = 'Please log in to comment';
+        pdSubmit.textContent = 'Login to comment';
+        pdSubmit.onclick = (e) => { e.preventDefault(); openAuthPanel(); };
+      } else {
+        pdText.removeAttribute('disabled');
+        pdText.placeholder = 'Write a comment...';
+        pdSubmit.textContent = 'Comment';
+        // rebind original handler by re-calling renderCommentsForPost when opened if needed
+      }
+    }
+  } catch { /* noop */ }
 
   // double-click handler: expand post instead of logging out
   // Support both single-click and double-click to open post detail.
@@ -826,6 +909,7 @@ const metadata = {
     try {
       const li = ev.target && ev.target.closest && ev.target.closest('.thread-item');
       if (!li) return;
+      console.debug('[community] thread click detected', { id: li.getAttribute('data-id') });
       ev.preventDefault();
       // if a dblclick just happened, skip this click
       if (__suppressNextClick) { __suppressNextClick = false; return; }
@@ -834,31 +918,47 @@ const metadata = {
         showPostDetailByElement(li);
         __clickOpenTimer = null;
       }, 200);
-    } catch (err) { /* noop */ }
+  } catch (err) { void err; }
   });
 
   document.body.addEventListener('dblclick', (ev) => {
     try {
       const li = ev.target && ev.target.closest && ev.target.closest('.thread-item');
       if (!li) return;
+      console.debug('[community] thread dblclick detected', { id: li.getAttribute('data-id') });
       // cancel pending single-click open
       if (__clickOpenTimer) { clearTimeout(__clickOpenTimer); __clickOpenTimer = null; }
       __suppressNextClick = true;
       ev.preventDefault();
       ev.stopPropagation();
       showPostDetailByElement(li);
-    } catch (err) { /* noop */ }
+  } catch (err) { void err; }
   });
 
   async function refreshPostList() {
     const list = $('thread-list');
     if (!list) return;
-    list.innerHTML = '';
-            const posts = await loadPosts();
+      list.innerHTML = ''; 
+      console.log('[community] refreshPostList: loading posts');
+            let posts = await loadPosts();
+            // Ensure locally pending posts are preserved and shown at top even if server/API fails
+            try {
+              const pending = getPendingPosts();
+              if (Array.isArray(pending) && pending.length) {
+                // prepend any pending posts that are not already in posts (match by id or title+content)
+                const merged = [];
+                for (const p of pending) {
+                  const exists = posts.some(s => (s.id && p.id && String(s.id) === String(p.id)) || (s.title === p.title && (s.content||'').slice(0,200) === (p.content||'').slice(0,200)));
+                  if (!exists) merged.push(p);
+                }
+                posts = merged.concat(posts || []);
+              }
+            } catch (e) { void e; }
     posts.forEach((p) => {
       const el = createPostElement(p);
       list.appendChild(el);
     });
+            console.log('[community] refreshPostList: rendered posts in DOM', { rendered: list.children.length });
     updateLikeButtons();
     // asynchronously fetch current comment totals for each post so the thread list shows up-to-date counts
     try {
@@ -877,9 +977,9 @@ const metadata = {
             }
             li.setAttribute('data-comments', String(total));
           }
-        } catch (e) { /* noop */ }
+  } catch (e) { void e; }
       });
-    } catch (e) { /* noop */ }
+  } catch (e) { void e; }
   }
 
   // Likes: try to persist to Supabase (requires RLS to allow authenticated updates), fallback to client-only
@@ -916,13 +1016,13 @@ const metadata = {
           pdIcon.textContent = '❤';
           pdIcon.classList.add('text-red-500');
           pdIcon.classList.add('scale-110');
-          setTimeout(() => { try { pdIcon.classList.remove('scale-110'); } catch (err) { /* noop */ } }, 260);
+          setTimeout(() => { try { pdIcon.classList.remove('scale-110'); } catch { /* noop */ } }, 260);
         } else {
           pdIcon.textContent = '♡';
           pdIcon.classList.remove('text-red-500');
         }
       }
-    } catch (err) { /* noop */ }
+  } catch { /* noop */ }
 
     // optimistic: try to update in DB via server API (which will fall back to file if needed)
     try {
@@ -965,7 +1065,7 @@ const metadata = {
   }
 
   // Wire UI
-  document.addEventListener('DOMContentLoaded', async () => {
+  async function initCommunityUI() {
     // If user landed here via Supabase magic link, the auth tokens may be in the URL fragment (#access_token=...)
     // Try to extract and set the session so clicking the email link immediately signs the user in.
     try {
@@ -978,38 +1078,38 @@ const metadata = {
             const refresh_token = params.get('refresh_token');
             const tokenType = params.get('type');
             console.debug('[community] detected auth fragment', { tokenType });
-            if (access_token) {
+      if (access_token) {
               // set session in supabase client (v2 API)
               try {
                 await supabase.auth.setSession({ access_token, refresh_token });
                 // remove tokens from URL to avoid leaking in referrers
-                try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (e) { /* noop */ }
+                try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch { /* noop */ }
                 // If this is a recovery (password reset) link, prompt user to set a new password
                 if (tokenType === 'recovery') {
                   // quick prompt fallback: ask for new password and update user
                   try {
-                    const newPwd = window.prompt('请输入新密码（至少 6 个字符）以完成密码重置：');
+                    const newPwd = window.prompt('Please enter a new password (at least 6 characters) to complete password reset:');
                     if (newPwd && newPwd.length >= 6) {
                       const upd = await supabase.auth.updateUser({ password: newPwd });
                       if (upd.error) {
                         console.warn('[community] updateUser failed', upd.error);
-                        showToast('设置新密码失败：' + (upd.error.message || String(upd.error)), 'error');
+                        showToast('Failed to set new password: ' + (upd.error.message || String(upd.error)), 'error');
                       } else {
-                        showToast('密码已重置并已登录', 'success');
+                        showToast('Password has been reset and you are logged in', 'success');
                       }
                     } else {
-                      showToast('未设置新密码，若需要请重新发送密码重置邮件', 'warn');
+                      showToast('No new password set; if needed, request a password reset email', 'warn');
                     }
                   } catch (e) {
                     console.error('[community] recovery flow failed', e);
-                    showToast('密码重置失败，请重试', 'error');
+                    showToast('Password reset failed, please try again', 'error');
                   }
                 } else {
-                  showToast('验证成功，您已登录', 'success');
+                  showToast('Verification successful, you are logged in', 'success');
                 }
               } catch (e) {
                 console.warn('[community] supabase.auth.setSession failed', e);
-                showToast('验证失败或链接已过期，请重试或重新发送验证邮件', 'error');
+                showToast('Verification failed or the link has expired. Please try again or resend the verification email.', 'error');
               }
             }
           } catch (err) { console.error('failed to parse auth fragment', err); }
@@ -1071,7 +1171,7 @@ const metadata = {
         if (!btn) return;
         e.preventDefault();
         // ensure logged in (use cached CURRENT_USER to avoid an auth round-trip)
-        if (!CURRENT_USER) { showToast('请先登录以进行点赞', 'error'); $('open-login-panel')?.click(); return; }
+  if (!CURRENT_USER) { showToast('Please log in to like posts', 'error'); openAuthPanel(); return; }
         await toggleLike(btn.getAttribute('data-id'));
       } catch (err) {
         console.error('[community] like delegation error', err);
@@ -1083,8 +1183,9 @@ const metadata = {
     if (tabsContainer) {
       tabsContainer.addEventListener('click', (ev) => {
         try {
+          console.log('[community] tabsContainer click', { target: ev.target && ev.target.tagName, html: ev.target && ev.target.outerHTML && ev.target.outerHTML.slice(0,200) });
           const btn = ev.target && ev.target.closest && ev.target.closest('.tab-btn');
-          if (!btn) return;
+          if (!btn) { console.log('[community] tabsContainer click: no .tab-btn on target'); return; }
           ev.preventDefault();
           const mode = btn.getAttribute('data-mode');
           console.log('[community] tab clicked', { mode });
@@ -1129,7 +1230,7 @@ const metadata = {
     $('open-new-topic')?.addEventListener('click', async (e) => {
       e.preventDefault();
       const { data } = await supabase.auth.getUser();
-      if (!data?.user) { showToast('请先登录', 'error'); $('open-login-panel')?.click(); return; }
+  if (!data?.user) { showToast('Please log in', 'error'); openAuthPanel(); return; }
       $('new-topic-modal')?.classList.remove('hidden'); $('new-topic-title')?.focus();
     });
 
@@ -1141,7 +1242,7 @@ const metadata = {
       if (!isSupabaseConfigured) {
         $('supabase-warning')?.classList.remove('hidden');
       }
-    } catch (e) {
+    } catch {
       // import.meta may not be reachable in some contexts; ignore
     }
 
@@ -1155,10 +1256,10 @@ const metadata = {
       const content = contentEl?.value?.trim();
 
   // client-side validation
-  if (!title) return showToast('请提供标题', 'error');
-  if (title.length > 200) return showToast('标题长度不能超过 200 个字符', 'error');
-  if (!content || content.length < 10) return showToast('内容过短，至少 10 个字符', 'error');
-  if (content.length > 10000) return showToast('内容过长，请限制在 10000 个字符以内', 'error');
+  if (!title) return showToast('Please provide a title.', 'error');
+  if (title.length > 200) return showToast('The title length must not exceed 200 characters.', 'error');
+  if (!content || content.length < 10) return showToast('Content is too short. At least 10 characters.', 'error');
+  if (content.length > 10000) return showToast('Content is too long. Please limit it to 10,000 characters.', 'error');
 
       const { data } = await supabase.auth.getUser();
       const user = data?.user ?? null;
@@ -1203,19 +1304,45 @@ const metadata = {
         }
 
         if (!created) {
-          const res = await supabase.from('posts').insert([payload]).select('*');
-          console.log('[community] supabase insert response (client)', res);
-          if (res.error) {
-            const msg = res.error.message || JSON.stringify(res.error);
-              showToast('发帖失败：' + msg + '\n(查看控制台获取更多详情)', 'error');
-            const warn = $('supabase-warning-text');
-            if (warn) warn.textContent = '发帖失败：' + msg + '（检查 Supabase 表和 RLS 策略）';
-            return;
+          // fallback: attempt client-side insert
+          try {
+            const res = await supabase.from('posts').insert([payload]).select('*');
+            console.log('[community] supabase insert response (client)', res);
+            if (!res.error && res.data) {
+              created = Array.isArray(res.data) ? res.data[0] : res.data;
+            }
+          } catch (e) {
+            console.warn('[community] client-side insert failed', e);
           }
-          created = Array.isArray(res.data) ? res.data[0] : res.data;
         }
 
-        // success: optimistically insert the created row into the list so users see it immediately
+        // If still not created (both server and client failed), create a local pending post
+        if (!created) {
+          const temp = Object.assign({}, payload);
+          temp.id = 'local-' + Date.now().toString(36);
+          temp.created_at = new Date().toISOString();
+          // ensure author_display exists
+          temp.author_display = temp.author_display || (display || 'You');
+          try { addPendingPost(temp); } catch (e) { void e; }
+          // insert optimistically so user sees their post immediately
+          try {
+            const list = document.getElementById('thread-list');
+            if (list) {
+              const existing = document.querySelector(`.thread-item[data-id="${temp.id}"]`);
+              if (!existing) {
+                const el = createPostElement(temp);
+                list.insertBefore(el, list.firstChild);
+                updateLikeButtons();
+                el.classList.add('ring-2', 'ring-[#006994]');
+                setTimeout(() => el.classList.remove('ring-2', 'ring-[#006994]'), 4000);
+                try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { void e; }
+              }
+            }
+          } catch (e) { console.warn('[community] optimistic local insert failed', e); }
+          showToast('Post saved locally and will sync when possible', 'success');
+        }
+
+  // success: optimistically insert the created row into the list so users see it immediately
         // then refresh from server shortly after to reconcile authoritative data
         try {
           if (created) {
@@ -1225,9 +1352,9 @@ const metadata = {
             // mark as pending until server confirms with a real id
             if (!String(created.id).startsWith('local-')) {
               // server returned real id -> remove any matching pending entries
-              try { removePendingMatching(created); } catch (e) { /* noop */ }
+              try { removePendingMatching(created); } catch (e) { void e; }
             } else {
-              try { addPendingPost(created); } catch (e) { /* noop */ }
+              try { addPendingPost(created); } catch (e) { void e; }
             }
             const list = document.getElementById('thread-list');
             if (list) {
@@ -1239,7 +1366,7 @@ const metadata = {
                 // highlight & scroll into view
                 el.classList.add('ring-2', 'ring-[#006994]');
                 setTimeout(() => el.classList.remove('ring-2', 'ring-[#006994]'), 4000);
-                try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { /* noop */ }
+                try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { void e; }
               }
             }
           }
@@ -1256,7 +1383,7 @@ const metadata = {
         setTimeout(() => refreshPostList(), 800);
       } catch (err) {
         console.error('[community] create post error', err);
-    showToast('发帖时发生异常，请查看控制台以获取更多信息', 'error');
+    showToast('An error occurred while creating the post. Check the console for more information', 'error');
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
@@ -1266,5 +1393,12 @@ const metadata = {
         }
       }
     });
-  });
+  }
+  // If DOMContentLoaded already fired, call immediately; otherwise wait for the event
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCommunityUI);
+  } else {
+    // DOM is already ready
+    initCommunityUI();
+  }
 </script>

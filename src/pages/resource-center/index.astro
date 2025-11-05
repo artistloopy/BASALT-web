@@ -7,12 +7,72 @@ const metadata = {
 	description: 'Browse resources, guides and downloadable content for BASALT.',
 };
 
-// Server-rendered demo files so the grid shows on client-side navigation without requiring JS execution
-// The first entry is the public BASALT guidance PDF (direct public URL provided by user).
-const FILES = [
-	{ id: 'guidance', title: 'BASALT Guide in Chinese', category: 'guidance', size: '3.1 MB', href: 'https://your-supabase-url.supabase.co/storage/v1/object/public/basalt/BASALT%20guide%20v2.pdf', path: 'https://your-supabase-url.supabase.co/storage/v1/object/public/basalt/BASALT%20guide%20v2.pdf', updated: '2025-01-04' },
-    { id: 'guidance', title: 'BASALT Guide in Chinese', category: 'guidance', size: '3.1 MB', href: 'https://cykhhfocqovwygendjmf.supabase.co/storage/v1/object/public/basalt%20resource%20center/BASALT%20guidance_20250104.pdf', path: 'https://cykhhfocqovwygendjmf.supabase.co/storage/v1/object/public/basalt%20resource%20center/BASALT%20guidance_20250104.pdf', updated: '2025-01-04' },
+// Server-rendered demo file (fallback). We'll attempt to replace this with a server-side
+// Supabase storage list during page render so the page shows a stable list on first load.
+const DEMO_FILES = [
+	{
+		id: 'guidance',
+		title: 'Guide in Chinese',
+		category: 'guidance',
+		size: '3.1 MB',
+		href: 'https://cykhhfocqovwygendjmf.supabase.co/storage/v1/object/public/basalt%20resource%20center/BASALT%20guidance_20250104.pdf',
+		path: 'https://cykhhfocqovwygendjmf.supabase.co/storage/v1/object/public/basalt%20resource%20center/BASALT%20guidance_20250104.pdf',
+		updated: '2025-01-04',
+	},
 ];
+
+let FILES = DEMO_FILES;
+
+// Try to populate FILES server-side from Supabase Storage so the page renders
+// with the real list immediately. This runs only during server-side rendering.
+try {
+	const { createClient } = await import('@supabase/supabase-js');
+	const SUPABASE_URL = process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || (globalThis?.__astro?.env?.PUBLIC_SUPABASE_URL);
+	const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE;
+	const ANON_KEY = process.env.PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || (globalThis?.__astro?.env?.PUBLIC_SUPABASE_ANON_KEY);
+	const BUCKET = process.env.RESOURCE_BUCKET_NAME || 'resources';
+
+	const key = SERVICE_ROLE_KEY || ANON_KEY || null;
+	if (SUPABASE_URL && key) {
+		try {
+			const supabase = createClient(SUPABASE_URL, key);
+			const res = await supabase.storage.from(BUCKET).list('', { limit: 200 });
+			if (!res.error && Array.isArray(res.data) && res.data.length > 0) {
+				const humanSize = (bytes) => {
+					if (!bytes && bytes !== 0) return '';
+					const b = Number(bytes);
+					if (isNaN(b)) return '';
+					const units = ['B','KB','MB','GB'];
+					let i = 0; let v = b;
+					while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+					return `${v.toFixed(v >= 100 ? 0 : 1)} ${units[i]}`;
+				};
+
+				FILES = res.data.map((it, idx) => {
+					// build public URL when possible
+					const publicUrl = SUPABASE_URL ? `${SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/public/${encodeURIComponent(BUCKET)}/${encodeURIComponent(it.name)}` : it.name;
+					return {
+						id: String(idx),
+						name: it.name || it.path || it.id,
+						title: it.name || it.path || it.id,
+						path: publicUrl,
+						href: publicUrl,
+						category: (it.metadata && it.metadata.category) || 'data',
+						size: it.size ? humanSize(it.size) : (it.metadata && it.metadata.size) || '',
+						updated: it.updated_at || it.last_modified || '',
+					};
+				});
+			}
+		} catch (e) {
+			// fail silently and keep demo FILES
+			console.debug('resource-center: server-side storage list failed', e);
+		}
+	}
+} catch (e) {
+	// importing @supabase or running server-side code may not be available in some environments
+	// keep demo FILES as fallback
+	// console.debug('resource-center: server-side init skipped', e);
+}
 ---
 
 <PageLayout {metadata}>
@@ -78,8 +138,7 @@ const FILES = [
 											<div class="text-sm text-muted">{f.category} · {f.size} · Updated {f.updated}</div>
 										</div>
 										<div class="flex items-center space-x-2">
-											<a class="px-3 py-1 text-sm rounded border" href={f.href} download>Download</a>
-											<button class="px-3 py-1 text-sm rounded bg-[#006994] text-white" data-id={f.id}>Details</button>
+											<a class="px-3 py-1 text-sm rounded border hover:bg-[#006994] hover:text-white transition" href={f.href} target="_blank" rel="noopener noreferrer" download>Download</a>
 										</div>
 									</div>
 								</div>
@@ -92,7 +151,7 @@ const FILES = [
 	</section>
 </PageLayout>
 
-<script id="initial-files" type="application/json">{JSON.stringify(FILES)}</script>
+<script id="initial-files" type="application/json" data-files={encodeURIComponent(JSON.stringify(FILES))}></script>
 
 <script type="module">
 	// Fetch resource list from server (Supabase storage) and present downloadable links.
@@ -111,12 +170,39 @@ const FILES = [
 
 	// initialize client FILES from the server-rendered JSON blob to avoid flash/empty-state
 	let FILES = [];
+	// Client-side demo fallback (mirror of server-side DEMO_FILES) in case parsing fails
+	const DEMO_FILES_CLIENT = [
+		{
+			id: 'guidance',
+			title: 'Guide in Chinese',
+			category: 'guidance',
+			size: '3.1 MB',
+			href: 'https://cykhhfocqovwygendjmf.supabase.co/storage/v1/object/public/basalt%20resource%20center/BASALT%20guidance_20250104.pdf',
+			path: 'https://cykhhfocqovwygendjmf.supabase.co/storage/v1/object/public/basalt%20resource%20center/BASALT%20guidance_20250104.pdf',
+			updated: '2025-01-04',
+		},
+	];
 	try {
-		const blob = document.getElementById('initial-files')?.textContent || '[]';
-		FILES = JSON.parse(blob);
+		const blobEl = document.getElementById('initial-files');
+		let blob = '[]';
+		if (blobEl) {
+			const encoded = blobEl.getAttribute('data-files') || blobEl.textContent || '[]';
+			try {
+				// decode first (in case server encoded it)
+				blob = decodeURIComponent(encoded);
+			} catch (e) {
+				blob = encoded;
+			}
+		}
+		try {
+			FILES = JSON.parse(blob);
+		} catch (err) {
+			console.warn('Failed to parse initial files JSON, falling back to demo files', err);
+			FILES = DEMO_FILES_CLIENT.slice();
+		}
 	} catch (err) {
-		console.warn('Failed to parse initial files JSON', err);
-		FILES = [];
+		console.warn('Failed to read initial files element, using demo files', err);
+		FILES = DEMO_FILES_CLIENT.slice();
 	}
 
 	function humanSize(bytes) {
@@ -150,20 +236,27 @@ const FILES = [
 			const actions = document.createElement('div');
 			actions.className = 'flex items-center space-x-2';
 
-			const dl = document.createElement('button');
-			dl.className = 'px-3 py-1 text-sm rounded border';
-			dl.textContent = 'Download';
-			dl.type = 'button';
-			dl.addEventListener('click', async () => await downloadFile(f.path || f.name || f.title));
-
-			const details = document.createElement('button');
-			details.className = 'px-3 py-1 text-sm rounded bg-[#006994] text-white';
-			details.type = 'button';
-			details.textContent = 'Details';
-			details.addEventListener('click', () => alert(`File: ${f.title || f.name}\nCategory: ${f.category}\nSize: ${f.size}`));
+			// If f.path is an absolute URL, render a direct anchor that opens in a new tab.
+			let dl;
+			const isAbsolute = typeof (f.path || f.href || '') === 'string' && /^(https?:)?\/\//i.test((f.path || f.href || ''));
+			if (isAbsolute) {
+				dl = document.createElement('a');
+				dl.className = 'px-3 py-1 text-sm rounded border hover:bg-[#006994] hover:text-white transition';
+				dl.textContent = 'Download';
+				dl.setAttribute('href', f.path || f.href || '#');
+				dl.setAttribute('target', '_blank');
+				dl.setAttribute('rel', 'noopener noreferrer');
+				// Use download attribute when filename present
+				if ((f.name || f.title)) dl.setAttribute('download', f.name || f.title);
+			} else {
+				dl = document.createElement('button');
+				dl.className = 'px-3 py-1 text-sm rounded border hover:bg-[#006994] hover:text-white transition';
+				dl.textContent = 'Download';
+				dl.type = 'button';
+				dl.addEventListener('click', async () => await downloadFile(f.path || f.name || f.title));
+			}
 
 			actions.appendChild(dl);
-			actions.appendChild(details);
 
 			const row = document.createElement('div');
 			row.className = 'flex items-start justify-between';
@@ -187,7 +280,8 @@ const FILES = [
 			const resp = await fetch('/api/storage/list');
 			if (!resp.ok) throw new Error('api/storage/list failed');
 			const json = await resp.json();
-			if (json && Array.isArray(json.data)) {
+			if (json && Array.isArray(json.data) && json.data.length > 0) {
+				// Only replace client FILES when server returns a non-empty list.
 				FILES = json.data.map((it, idx) => ({
 					id: String(idx),
 					name: it.name || it.path || it.id,
