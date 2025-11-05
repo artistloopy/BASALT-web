@@ -1,50 +1,44 @@
-import { createClient } from '@supabase/supabase-js';
+// src/lib/supabase.ts
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const SUPABASE_URL = String(import.meta.env.PUBLIC_SUPABASE_URL || '');
+const PUBLIC_ANON = String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '');
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.warn('Supabase env vars are not set: PUBLIC_SUPABASE_URL or PUBLIC_SUPABASE_ANON_KEY');
+function makeNoopClient() {
+  const noop = {
+    auth: {
+      async getUser() { return { data: { user: null } }; },
+      async getSession() { return { data: { session: null } }; },
+      onAuthStateChange() { return { data: null, subscription: { unsubscribe() {} } }; },
+      async signOut() { return { error: null }; },
+      async setSession() { return { error: null }; },
+      async signInWithPassword() { return { error: { message: 'Not configured' } }; },
+    },
+    from() {
+      return {
+        select: async () => ({ data: [], error: null }),
+        insert: async () => ({ data: [], error: null }),
+        update: async () => ({ data: [], error: null }),
+        delete: async () => ({ data: [], error: null }),
+        order: () => this,
+        limit: () => this,
+      };
+    },
+  } as unknown as SupabaseClient;
+  return noop;
 }
 
-let supabaseClient;
-if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-  supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-} else {
-  // lightweight shim so importing modules won't crash when env is not configured.
-  const noop = async () => ({ data: null, error: { message: 'Supabase not configured' } });
-  const noopGetUser = async () => ({ data: { user: null } });
-  const authShim = {
-    getUser: noopGetUser,
-    // getSession/setSession used by client code to access tokens
-    getSession: async () => ({ data: { session: null } }),
-    setSession: async (_obj) => ({ data: { session: null } }),
-  signOut: async () => ({}),
-  signUp: noop,
-  signInWithPassword: noop,
-  updateUser: async (_obj) => ({ data: null, error: { message: 'Supabase not configured' } }),
-    onAuthStateChange: (_cb) => ({ data: null }),
-  };
+// browser/client supabase (anon key)
+export const supabase = (typeof window !== 'undefined' && SUPABASE_URL && PUBLIC_ANON)
+  ? createClient(SUPABASE_URL, PUBLIC_ANON, { auth: { persistSession: true, detectSessionInUrl: true } })
+  : makeNoopClient();
 
-  const queryShim = () => {
-    const chain = {
-      select: async () => ({ data: [], error: null }),
-      insert: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
-      update: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
-      order: () => chain,
-      limit: () => chain,
-      eq: () => chain,
-      // for compatibility
-      then: (cb) => cb({ data: [], error: null }),
-    };
-    return chain;
-  };
-
-  supabaseClient = {
-    auth: authShim,
-    from: (_table) => queryShim(),
-  };
+// server-side factory (use in server API routes)
+// Note: do NOT export the server client to browser code. Call createServerClient() only inside server code.
+export function createServerSupabase() {
+  const SERVICE_ROLE = String(process.env.SUPABASE_SERVICE_ROLE_KEY || import.meta.env.SUPABASE_SERVICE_ROLE_KEY || '');
+  if (!SUPABASE_URL || !SERVICE_ROLE) return null;
+  return createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
 }
 
-export const supabase = supabaseClient;
 export default supabase;

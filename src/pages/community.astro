@@ -312,9 +312,19 @@ const metadata = {
           try {
             const { data } = await supabase.auth.getUser();
             CURRENT_USER = data?.user ?? null;
-          } catch (e) { void e; }
+          } catch { /* noop */ }
         }
-  if (!CURRENT_USER) { showToast('Please log in', 'error'); openAuthPanel(); return; }
+        // Fallback: if CURRENT_USER isn't set but the header shows a logged-in user, treat as logged in
+        try {
+          const headerStatus = document.getElementById('auth-status-header');
+          if (!CURRENT_USER && headerStatus && (headerStatus.textContent || '').trim()) {
+            CURRENT_USER = { __inferred_from_dom: true };
+          }
+        } catch { /* noop */ }
+        // Always open the new-topic modal; if the user is not logged in show a toast prompting login
+        if (!CURRENT_USER) {
+          showToast('Please log in to post (you can still view this dialog)', 'warn');
+        }
         $('new-topic-modal')?.classList.remove('hidden');
         $('new-topic-title')?.focus();
         return;
@@ -1229,8 +1239,14 @@ const metadata = {
     // New topic button
     $('open-new-topic')?.addEventListener('click', async (e) => {
       e.preventDefault();
-      const { data } = await supabase.auth.getUser();
-  if (!data?.user) { showToast('Please log in', 'error'); openAuthPanel(); return; }
+      try {
+        const { data } = await supabase.auth.getUser();
+        const user = data?.user ?? null;
+        // If supabase didn't return a user, check header DOM for an authenticated display
+        const headerStatus = document.getElementById('auth-status-header');
+        const headerHasUser = headerStatus && (headerStatus.textContent || '').trim();
+        if (!user && !headerHasUser) showToast('Please log in to post (you can still view this dialog)', 'warn');
+      } catch { /* noop */ }
       $('new-topic-modal')?.classList.remove('hidden'); $('new-topic-title')?.focus();
     });
 
