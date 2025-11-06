@@ -3,7 +3,7 @@
 
 ![BASALT screenshot](public/assets/images/hero-image.png)
 
-This repository powers the BASALT website (local project name: `lonely-limb`). It is built with
+This repository powers the BASALT website (local project name: `BASALTHub`). It is built with
 Astro + Tailwind and provides a small community forum, a resource center for file downloads,
 and a blog. The site will persist data to Supabase when configured; otherwise it falls back to
 local JSON files so the UI remains browseable.
@@ -20,7 +20,7 @@ If you need to re-skin or adapt the theme, most layout and UI lives under `src/c
 
 ![BASALT screenshot](public/assets/images/hero-image.png)
 
-This repository powers the BASALT website (local project: `lonely-limb`). It is built with
+This repository powers the BASALT website (local project: `BASALTHub`). It is built with
 Astro + Tailwind and provides a community forum, a resource center for downloads, and a blog.
 When Supabase is configured the site persists data; otherwise local JSON fallbacks allow
 read-only browsing.

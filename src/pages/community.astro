@@ -139,8 +139,6 @@ const metadata = {
     return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  // registration UI removed: registration-related client state cleared
-
   // simple toast helper (in-page notifications)
   function ensureToastContainer() {
     let c = document.getElementById('toast-container');
@@ -863,7 +861,7 @@ const metadata = {
         // post to server
         const res = await postCommentToServer(id, text);
         if (res && res.error) {
-          showToast('发表评论失败：' + (res.error || ''), 'error');
+          showToast('Comment posting failed：' + (res.error || ''), 'error');
           return;
         }
 
@@ -1279,7 +1277,7 @@ const metadata = {
 
       const { data } = await supabase.auth.getUser();
       const user = data?.user ?? null;
-    if (!user) return showToast('请先登录', 'error');
+    if (!user) return showToast('please log in first!', 'error');
 
   const display = (user.user_metadata && (user.user_metadata.username || user.user_metadata.name)) || ((user.email||'').split('@')[0]);
   const payload = { title, content, author_display: display, likes: 0 };

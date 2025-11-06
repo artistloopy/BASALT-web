@@ -1,8 +1,8 @@
 // src/lib/supabase.ts
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = String(import.meta.env.PUBLIC_SUPABASE_URL || '');
-const PUBLIC_ANON = String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '');
+const SUPABASE_URL = String(import.meta.env.PUBLIC_SUPABASE_URL || 'https://cykhhfocqovwygendjmf.supabase.co');
+const PUBLIC_ANON = String(import.meta.env.PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5a2hoZm9jcW92d3lnZW5kam1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE2MzU0MjcsImV4cCI6MjA3NzIxMTQyN30.bVL0BRKrdDnhcWs2tmQgd33KwD2-hmyGt3xFBVojFpk');
 
 function makeNoopClient() {
   const noop = {
