@@ -1,0 +1,117 @@
+---
+import '~/assets/styles/tailwind.css';
+
+import { I18N } from 'astrowind:config';
+
+import CommonMeta from '~/components/common/CommonMeta.astro';
+import Favicons from '~/components/Favicons.astro';
+import CustomStyles from '~/components/CustomStyles.astro';
+import ApplyColorMode from '~/components/common/ApplyColorMode.astro';
+import Metadata from '~/components/common/Metadata.astro';
+import SiteVerification from '~/components/common/SiteVerification.astro';
+import Analytics from '~/components/common/Analytics.astro';
+import BasicScripts from '~/components/common/BasicScripts.astro';
+
+// Comment the line below to disable View Transitions
+import { ClientRouter } from 'astro:transitions';
+
+import type { MetaData as MetaDataType } from '~/types';
+
+export interface Props {
+  metadata?: MetaDataType;
+}
+
+const { metadata = {} } = Astro.props;
+const { language, textDirection } = I18N;
+---
+
+<!doctype html>
+<html lang={language} dir={textDirection} class="2xl:text-[20px]">
+  <head>
+    <CommonMeta />
+    <Favicons />
+    <CustomStyles />
+    <ApplyColorMode />
+    <Metadata {...metadata} />
+    <SiteVerification />
+    <Analytics />
+
+    <!-- Comment the line below to disable View Transitions -->
+    <ClientRouter fallback="swap" />
+  </head>
+
+  <body class="antialiased text-default bg-page tracking-tight overflow-x-hidden">
+    <slot />
+
+    <!-- Runtime safeguard: ensure password/email inputs have autocomplete even if hydration or third-party scripts replace DOM -->
+    <script>
+      try {
+        (function(){
+          const ensureAll = () => {
+            const map = [
+              ['h-reg-name','name'],
+              ['h-reg-email','email'],
+              ['h-reg-password','new-password'],
+              ['h-login-email','email'],
+              ['h-login-password','current-password'],
+            ];
+            map.forEach(([id,val]) => {
+              try {
+                const el = document.getElementById(id);
+                if (el && !el.getAttribute('autocomplete')) el.setAttribute('autocomplete', val);
+              } catch { /* noop */ }
+            });
+          };
+          ensureAll();
+          const mo = new MutationObserver((mutations)=>{
+            for (const m of mutations) {
+              if (m.addedNodes && m.addedNodes.length) { ensureAll(); break; }
+            }
+          });
+          mo.observe(document.documentElement || document.body, { childList: true, subtree: true });
+          setTimeout(()=>mo.disconnect(), 10000);
+        })();
+  } catch { /* noop */ }
+    </script>
+
+    <!-- Auto-handle Supabase OAuth fragment on root: if GitHub/Supabase redirects back to /#access_token=..., set session automatically -->
+    <script type="module">
+      (async () => {
+        try {
+          if (typeof window === 'undefined') return;
+          const hash = window.location.hash ? window.location.hash.substring(1) : '';
+          if (!hash) return;
+          console.debug('OAuth fragment present, attempting to parse tokens');
+          const params = new URLSearchParams(hash);
+          const access_token = params.get('access_token');
+          const refresh_token = params.get('refresh_token');
+          if (!access_token) {
+            console.debug('OAuth fragment did not contain access_token');
+            return;
+          }
+          // try dynamic import of client supabase
+          try {
+            const mod = await import('/src/lib/supabase.ts');
+            const supabase = mod.supabase || mod.default || null;
+            if (supabase && supabase.auth && typeof supabase.auth.setSession === 'function') {
+              console.debug('Calling supabase.auth.setSession');
+              await supabase.auth.setSession({ access_token, refresh_token });
+              console.debug('supabase setSession completed');
+            } else {
+              console.debug('supabase client missing or setSession not available');
+            }
+          } catch (e) {
+            // ignore import errors but surface them for debugging
+            console.warn('supabase import/setSession failed', e);
+          }
+          // clear fragment and update history
+          try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch { /* noop */ }
+        } catch (err) {
+          console.error('oauth fragment handler error', err);
+        }
+      })();
+    </script>
+
+    <BasicScripts />
+  </body>
+</html>

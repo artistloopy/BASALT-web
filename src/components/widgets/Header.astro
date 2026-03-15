@@ -1,0 +1,394 @@
+---
+import type { CallToAction } from '~/types';
+import { Icon } from 'astro-icon/components';
+import Button from '~/components/ui/Button.astro';
+import Logo from '~/components/Logo.astro';
+import ToggleMenu from '~/components/common/ToggleMenu.astro';
+import ToggleTheme from '~/components/common/ToggleTheme.astro';
+import { getHomePermalink, trimSlash, getAsset } from '~/utils/permalinks';
+
+interface Link {
+  text?: string;
+  href?: string;
+  ariaLabel?: string;
+  icon?: string;
+  links?: Array<Link>;
+}
+
+export interface Props {
+  id?: string;
+  links?: Array<Link>;
+  actions?: Array<CallToAction>;
+  isSticky?: boolean;
+  isDark?: boolean;
+  isFullWidth?: boolean;
+  showToggleTheme?: boolean;
+  showRssFeed?: boolean;
+  position?: 'left' | 'center' | 'right';
+}
+
+const {
+  id = 'header',
+  links = [],
+  actions = [],
+  isSticky = false,
+  isDark = false,
+  isFullWidth = false,
+  showToggleTheme = false,
+  showRssFeed = false,
+  position = 'center',
+} = Astro.props as Props;
+
+const currentPath = `/${trimSlash(new URL(Astro.url).pathname)}`;
+---
+
+<header
+  class:list={[
+    { sticky: isSticky, relative: !isSticky, dark: isDark },
+    'top-0 z-40 flex-none mx-auto w-full border-b border-gray-200 bg-white dark:bg-slate-900 transition-[opacity] ease-in-out',
+  ]}
+  {...id ? { id } : {}}
+>
+  <div class:list={[
+    'relative text-default py-3 px-3 md:px-6 mx-auto w-full',
+    { 'md:flex md:justify-between': position !== 'center' },
+    { 'md:grid md:grid-cols-3 md:items-center': position === 'center' },
+  { 'max-w-7xl': !isFullWidth },
+  ]}>
+
+    <!-- left: logo + mobile menu -->
+    <div class:list={[{ 'mr-auto rtl:mr-0 rtl:ml-auto': position === 'right' }, 'flex justify-between items-center']}>
+      <a class="flex items-center" href={getHomePermalink()}>
+        <Logo />
+      </a>
+      <div class="flex items-center md:hidden">
+        <ToggleMenu />
+      </div>
+    </div>
+
+    <!-- center: navigation -->
+    <nav
+      class="items-center w-full md:w-auto hidden md:flex md:mx-5 text-default overflow-y-auto overflow-x-hidden md:overflow-y-visible md:overflow-x-auto md:justify-self-center"
+      aria-label="Main navigation"
+    >
+      <ul class="flex flex-col md:flex-row md:self-center w-full md:w-auto text-xl md:text-[0.9375rem] tracking-[0.01rem] font-medium md:justify-center">
+        {links.map((l) => (
+          <li class={l?.links?.length ? 'dropdown' : ''}>
+            {l?.links?.length ? (
+              <>
+                {l.href ? (
+                  <a href={l.href} class:list={['hover:text-link dark:hover:text-white px-4 py-3 flex items-center whitespace-nowrap', { 'transform transition-transform duration-150 ease-out hover:scale-110': l.text === 'Community' || l.text === 'Resource Center' }]}>
+                    {l.text} <Icon name="tabler:chevron-down" class="w-3.5 h-3.5 ml-0.5 hidden md:inline text-[#006994]" />
+                  </a>
+                ) : (
+                  <button type="button" class:list={['hover:text-link dark:hover:text-white px-4 py-3 flex items-center whitespace-nowrap', { 'transform transition-transform duration-150 ease-out hover:scale-110': l.text === 'Community' || l.text === 'Resource Center' }]}>
+                    {l.text} <Icon name="tabler:chevron-down" class="w-3.5 h-3.5 ml-0.5 hidden md:inline text-[#006994]" />
+                  </button>
+                )}
+                <ul class="dropdown-menu md:backdrop-blur-md dark:md:bg-dark rounded md:absolute pl-4 md:pl-0 md:hidden font-medium md:bg-white/90 dark:md:bg-slate-900/90 md:min-w-[200px] drop-shadow-xl">
+                  {l.links.map((sub) => (
+                    <li>
+                          <a class:list={['first:rounded-t last:rounded-b md:hover:bg-gray-100 hover:bg-[#006994] dark:hover:bg-[#006994] py-2 px-5 block whitespace-no-wrap', { 'aw-link-active': sub.href === currentPath }]} href={sub.href}>
+                            {sub.text}
+                          </a>
+                    </li>
+                  ))}
+                </ul>
+              </>
+              ) : (
+              <a href={l.href} class:list={['hover:text-link dark:hover:text-white px-4 py-3 flex items-center whitespace-nowrap', { 'aw-link-active': l.href === currentPath }, { 'transform transition-transform duration-150 ease-out hover:scale-110': l.text === 'Community' || l.text === 'Resource Center' }]}>
+                {l.text}
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+  <!-- right: tools + account -->
+  <div class:list={[{ 'ml-auto rtl:ml-0 rtl:mr-auto': position === 'left' }, 'hidden md:self-center md:flex items-center md:mb-0 md:w-auto md:justify-end gap-4']}> 
+      <div class="flex items-center gap-3">
+        {showToggleTheme && <ToggleTheme iconClass="w-6 h-6 md:w-5 md:h-5 md:inline-block" />}
+        {showRssFeed && (
+          <a class="text-muted dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5 inline-flex items-center" aria-label="RSS Feed" href={getAsset('/rss.xml')}>
+            <Icon name="tabler:rss" class="w-5 h-5" />
+          </a>
+        )}
+        {actions?.length ? (
+          <span class="ml-2">
+            {actions.map((btnProps) => (
+              <Button {...btnProps} class="ml-2 py-2.5 px-5.5 md:px-6 font-semibold shadow-none text-sm w-auto" />
+            ))}
+          </span>
+        ) : null}
+      </div>
+
+  {currentPath === '/community' ? (
+  <div class="ml-4 relative">
+          <div class="flex items-center space-x-3">
+          <div id="auth-status-header" class="text-sm text-muted"></div>
+          <button id="open-login-panel" class="text-sm text-[#006994] hover:underline">Login</button>
+          <button id="header-logout" class="text-sm text-[#006994] hover:underline hidden">Logout</button>
+        </div>
+
+        <div id="auth-panel" class="hidden absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded shadow-lg p-4 z-50">
+          <div class="flex justify-between items-center mb-3">
+            <div class="text-sm font-medium">Account</div>
+            <button id="close-auth-panel" class="text-sm text-muted">Close</button>
+          </div>
+
+          {/* third-party providers (keep GitHub inside login panel) */}
+          <div class="text-center mt-3">
+            <button id="header-github-btn" class="w-full inline-flex items-center justify-center gap-2 text-sm border rounded px-3 py-2 hover:bg-gray-100 dark:hover:bg-slate-700" aria-label="Continue with GitHub">Continue with GitHub</button>
+          </div>
+
+          {/* Login via providers only; email/password login removed from header */}
+        </div>
+      </div>
+      ) : null}
+      <!-- register modal removed to eliminate inline registration UI -->
+  </div>
+
+  </div>
+</header>
+
+<!-- Only include header auth bindings on the Community page to avoid showing login controls elsewhere -->
+{currentPath === '/community' ? (
+<script>
+  try {
+    document.addEventListener('DOMContentLoaded', () => {
+  // registration and header email/password login inputs removed
+      // small toast helper for the header
+      function headerToast(msg, type = 'info', t = 3500) {
+        try {
+          let c = document.getElementById('header-toast-container');
+          if (!c) {
+            c = document.createElement('div');
+            c.id = 'header-toast-container';
+            c.style.position = 'fixed';
+            c.style.right = '1rem';
+            c.style.top = '1rem';
+            c.style.zIndex = '99999';
+            document.body.appendChild(c);
+          }
+          const el = document.createElement('div');
+          el.textContent = msg;
+          el.style.color = 'white';
+          el.style.padding = '0.5rem 0.75rem';
+          el.style.borderRadius = '6px';
+          el.style.marginTop = '0.5rem';
+          el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.08)';
+          el.style.background = type === 'error' ? '#ef4444' : (type === 'success' ? '#10b981' : '#374151');
+          c.appendChild(el);
+          setTimeout(() => { try { c.removeChild(el); } catch (e) { console.error(e); } }, t);
+        } catch (e) { console.error(e); }
+      }
+
+      // resend-confirmation helper removed (no header email/password inputs remain)
+
+      // bind GitHub OAuth buttons (header top-right and auth-panel)
+      const bindGithubButtons = () => {
+        let oauthTimer = null;
+        const setLoading = (on) => {
+          const hBtnEl = document.getElementById('github-login-btn');
+          const pBtnEl = document.getElementById('header-github-btn');
+          [hBtnEl, pBtnEl].forEach((el) => {
+            if (!el) return;
+            if (on) {
+              el.setAttribute('aria-busy', 'true');
+              el.setAttribute('disabled', 'true');
+              el.dataset.loading = '1';
+              el.classList.add('opacity-60', 'pointer-events-none');
+              // add simple spinner if not present
+              if (!el.querySelector('.btn-spinner')) {
+                const sp = document.createElement('span');
+                sp.className = 'btn-spinner inline-block ml-2 w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin';
+                el.appendChild(sp);
+              }
+            } else {
+              el.removeAttribute('aria-busy');
+              el.removeAttribute('disabled');
+              delete el.dataset.loading;
+              el.classList.remove('opacity-60', 'pointer-events-none');
+              const sp = el.querySelector('.btn-spinner');
+              if (sp) sp.remove();
+            }
+          });
+        };
+
+        const clearOauthTimer = () => {
+          try { if (oauthTimer) { clearTimeout(oauthTimer); oauthTimer = null; } } catch(e){}
+        };
+
+        const doGithub = async () => {
+          setLoading(true);
+          // If the browser doesn't actually navigate within X seconds, show a helpful hint
+          oauthTimer = setTimeout(() => {
+            headerToast('登录尚未开始。若使用弹窗，请检查浏览器是否阻止弹窗；或稍候再试。', 'error', 8000);
+            setLoading(false);
+            oauthTimer = null;
+          }, 12000);
+
+          // try to use the bundled supabase client if available, otherwise fall back to a direct redirect
+          // Redirect back to the exact page the user started the flow on (origin + path + search),
+          // so the callback fragment lands on the same page and header logic can handle it.
+          const redirectTo = (function(){ try { return window.location.origin + window.location.pathname + window.location.search; } catch(e){ return window.location.origin; } })();
+          const SUPABASE_URL = "" + (typeof import.meta !== 'undefined' ? (import.meta.env?.PUBLIC_SUPABASE_URL || '') : '');
+          try {
+            const mod = await import('/src/lib/supabase.ts');
+            const supabase = mod?.supabase || mod?.default || null;
+            if (supabase && supabase.auth && typeof supabase.auth.signInWithOAuth === 'function') {
+              // ensure we redirect in same tab (avoid popup blockers)
+              await supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo } });
+              // navigation should occur; if not, timer will show message
+              return;
+            }
+            console.debug('supabase client missing signInWithOAuth, falling back to direct authorize URL');
+          } catch (err) {
+            console.debug('dynamic import of supabase failed, will use direct redirect', err);
+          }
+
+          // Fallback: construct authorize URL and navigate there
+          try {
+            if (!SUPABASE_URL) {
+              headerToast('无法启动 GitHub 登录（未配置 Supabase URL）', 'error');
+              setLoading(false);
+              clearOauthTimer();
+              return;
+            }
+            const url = new URL('/auth/v1/authorize', SUPABASE_URL);
+            url.searchParams.set('provider', 'github');
+            url.searchParams.set('redirect_to', redirectTo);
+            // open in same tab to avoid popup blockers
+            window.location.href = url.toString();
+          } catch (e) {
+            console.error('fallback oauth redirect failed', e);
+            headerToast('无法启动 GitHub 登录，请检查控制台', 'error');
+            setLoading(false);
+            clearOauthTimer();
+          }
+        };
+
+        const hBtn = document.getElementById('github-login-btn');
+        const pBtn = document.getElementById('header-github-btn');
+        const clickHandler = (e) => { e.preventDefault(); doGithub(); };
+        if (hBtn) hBtn.addEventListener('click', clickHandler);
+        if (pBtn) pBtn.addEventListener('click', clickHandler);
+
+        // clear timer on unload (navigation) so stale timer doesn't fire
+        window.addEventListener('pagehide', () => { clearOauthTimer(); });
+      };
+      bindGithubButtons();
+      // auth UI initialization: check current session and subscribe to auth state changes
+      (async function setupAuthUI(){
+        try {
+          const updateAuthUI = (user) => {
+            try {
+              const status = document.getElementById('auth-status-header');
+              const openBtn = document.getElementById('open-login-panel');
+              const logoutBtn = document.getElementById('header-logout');
+              if (user) {
+                // prefer display name or email
+                // Prefer a username if provided in user metadata, then nicer name fields,
+                // then fallback to the email local-part (before @), then the id prefix.
+                const meta = user?.user_metadata || {};
+                const emailLocal = user?.email ? (user.email.split('@')[0]) : null;
+                const name = meta?.username || meta?.name || meta?.full_name || emailLocal || (user?.id ? user.id.substring(0,8) : 'Signed in');
+                if (status) status.textContent = name;
+                if (openBtn) openBtn.classList.add('hidden');
+                if (logoutBtn) logoutBtn.classList.remove('hidden');
+              } else {
+                if (status) status.textContent = '';
+                if (openBtn) openBtn.classList.remove('hidden');
+                if (logoutBtn) logoutBtn.classList.add('hidden');
+              }
+            } catch (e) { console.error('updateAuthUI error', e); }
+          };
+
+          let supabase = null;
+          try {
+            const mod = await import('/src/lib/supabase.ts');
+            supabase = mod?.supabase || mod?.default || null;
+          } catch (e) {
+            console.debug('could not import supabase in header auth init', e);
+          }
+
+          if (!supabase || !supabase.auth) {
+            // no supabase available; ensure UI shows logged-out state
+            updateAuthUI(null);
+            return;
+          }
+
+          // get current user/session if available
+          try {
+            let user = null;
+            if (typeof supabase.auth.getUser === 'function') {
+              const r = await supabase.auth.getUser();
+              user = r?.data?.user || null;
+            } else if (typeof supabase.auth.getSession === 'function') {
+              const s = await supabase.auth.getSession();
+              user = s?.data?.session?.user || s?.user || null;
+            }
+            updateAuthUI(user);
+          } catch (e) {
+            console.debug('error fetching initial supabase user', e);
+            updateAuthUI(null);
+          }
+
+          // subscribe to auth state changes
+          try {
+            if (typeof supabase.auth.onAuthStateChange === 'function') {
+              supabase.auth.onAuthStateChange((event, session) => {
+                console.debug('supabase onAuthStateChange', event, session);
+                const user = session?.user || null;
+                updateAuthUI(user);
+              });
+            }
+          } catch (e) {
+            console.debug('onAuthStateChange subscribe failed', e);
+          }
+
+          // bind logout
+          const logoutBtn = document.getElementById('header-logout');
+          if (logoutBtn) {
+            logoutBtn.addEventListener('click', async (ev) => {
+              ev.preventDefault();
+              try {
+                await supabase.auth.signOut();
+                updateAuthUI(null);
+                headerToast('已登出', 'success');
+              } catch (err) {
+                console.error('signOut failed', err);
+                headerToast('登出失败', 'error');
+              }
+            });
+          }
+        } catch (err) {
+          console.error('setupAuthUI error', err);
+        }
+      })();
+      // open/close auth panel bindings: show providers and focus GitHub button when opening
+      const openLoginBtn = document.getElementById('open-login-panel');
+      const closeAuthBtn = document.getElementById('close-auth-panel');
+      const authPanel = document.getElementById('auth-panel');
+      if (openLoginBtn) {
+        openLoginBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          authPanel?.classList.remove('hidden');
+          // focus the GitHub provider button so users see it immediately
+          const prov = document.getElementById('header-github-btn');
+          try { prov?.focus(); } catch { /* noop */ }
+        });
+      }
+      if (closeAuthBtn) {
+        closeAuthBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          authPanel?.classList.add('hidden');
+        });
+      }
+    });
+  } catch {
+    // noop
+  }
+
+</script>) : null}

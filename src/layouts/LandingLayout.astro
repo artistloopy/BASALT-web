@@ -1,0 +1,33 @@
+---
+import PageLayout from '~/layouts/PageLayout.astro';
+import Header from '~/components/widgets/Header.astro';
+import Announcement from '~/components/widgets/Announcement.astro';
+
+import { headerData } from '~/navigation';
+import type { MetaData } from '~/types';
+
+export interface Props {
+  metadata?: MetaData;
+}
+
+const { metadata } = Astro.props;
+---
+
+<PageLayout metadata={metadata}>
+  <Fragment slot="announcement">
+    <slot name="announcement">
+      <Announcement />
+    </slot>
+  </Fragment>
+  <Fragment slot="header">
+    <slot name="header">
+      <Header
+        {...headerData}
+        isSticky
+        showToggleTheme
+        position="center"
+      />
+    </slot>
+  </Fragment>
+  <slot />
+</PageLayout>
